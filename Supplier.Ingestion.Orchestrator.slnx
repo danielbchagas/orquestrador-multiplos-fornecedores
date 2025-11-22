@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/docs/">
+    <File Path="docs/Diagram.png" />
+  </Folder>
+  <Folder Name="/files/">
+    <File Path="files/docker-compose.yml" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Supplier.Ingestion.Orchestrator.Api/Supplier.Ingestion.Orchestrator.Api.csproj" Id="12af1ce2-647a-41b3-bed4-e6be2fa2a365" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Supplier.Ingestion.Orchestrator.UnitTests/Supplier.Ingestion.Orchestrator.UnitTests.csproj" Id="6e30caff-13b5-43b2-a41c-797e4d076453" />
+  </Folder>
+</Solution>
