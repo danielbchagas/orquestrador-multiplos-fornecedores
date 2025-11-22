@@ -1,0 +1,6 @@
+@Supplier.Ingestion.Orchestrator.Api_HostAddress = http://localhost:5259
+
+GET https://learn.microsoft.com/pt-br/dotnet/core/whats-new/dotnet-10/overview
+Accept: application/json
+
+###

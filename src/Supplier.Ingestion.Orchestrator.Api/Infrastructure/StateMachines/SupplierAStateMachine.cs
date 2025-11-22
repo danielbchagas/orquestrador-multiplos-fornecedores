@@ -1,0 +1,88 @@
+﻿using MassTransit;
+using Supplier.Ingestion.Orchestrator.Api.Domain.Events;
+
+namespace Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
+
+public class SupplierAStateMachine : MassTransitStateMachine<InfringementState>
+{
+    public Event<SupplierAInputReceived> InputReceived { get; private set; }
+
+    public SupplierAStateMachine(ILogger<SupplierAStateMachine> logger)
+    {
+        InstanceState(x => x.CurrentState);
+
+        Event(() => InputReceived, x =>
+        {
+            x.SelectId(ctx => ctx.Message.CorrelationId);
+            x.InsertOnInitial = true;
+        });
+
+        Initially(
+            When(InputReceived)
+                .Then(ctx =>
+                {
+                    logger.LogInformation("Saga Iniciada: {ExternalId}", ctx.Message.ExternalId);
+
+                    ctx.Saga.CorrelationId = ctx.Message.CorrelationId;
+                    ctx.Saga.ExternalId = ctx.Message.ExternalId;
+                    ctx.Saga.Plate = ctx.Message.Plate;
+                    ctx.Saga.Amount = ctx.Message.TotalValue;
+                    ctx.Saga.OriginSystem = ctx.Message.OriginSystem;
+                    ctx.Saga.InfringementCode = ctx.Message.Infringement;
+                    ctx.Saga.CreatedAt = DateTime.UtcNow;
+
+                    var errors = new List<string>();
+                    if (string.IsNullOrEmpty(ctx.Saga.Plate)) errors.Add("Placa invalida");
+                    if (ctx.Saga.Amount < 0) errors.Add("Valor invalido");
+
+                    ctx.Saga.IsValid = errors.Count == 0;
+                    ctx.Saga.ValidationErrors = string.Join(",", errors);
+                })
+                .IfElse(
+                    ctx => ctx.Saga.IsValid,
+
+                    binder => binder.ThenAsync(async ctx =>
+                    {
+                        var producer = ctx.GetPayload<IServiceProvider>()
+                            .GetRequiredService<ITopicProducer<string, UnifiedInfringementProcessed>>();
+
+                        await producer.Produce(
+                            ctx.Saga.ExternalId,
+                            new UnifiedInfringementProcessed(
+                                ctx.Saga.ExternalId,
+                                ctx.Saga.Plate,
+                                ctx.Saga.InfringementCode,
+                                ctx.Saga.Amount,
+                                ctx.Saga.OriginSystem
+                            ),
+                            ctx.CancellationToken
+                        );
+
+                        logger.LogInformation("Mensagem enviada para o Kafka (Sucesso)!");
+                    })
+                    .Finalize(),
+
+                    binder => binder.ThenAsync(async ctx =>
+                    {
+                        var producer = ctx.GetPayload<IServiceProvider>()
+                            .GetRequiredService<ITopicProducer<string, InfringementValidationFailed>>();
+
+                        await producer.Produce(
+                            ctx.Saga.ExternalId,
+                            new InfringementValidationFailed(
+                                ctx.Saga.ExternalId,
+                                ctx.Saga.OriginSystem,
+                                ctx.Saga.ValidationErrors
+                            ),
+                            ctx.CancellationToken
+                        );
+
+                        logger.LogWarning("Mensagem enviada para o Kafka (DLQ)!");
+                    })
+                    .Finalize()
+                )
+        );
+
+        SetCompletedWhenFinalized();
+    }
+}
