@@ -25,9 +25,7 @@ public class SupplierBStateMachine : MassTransitStateMachine<InfringementState>
                     logger.LogInformation("Saga B Iniciada. ExternalCode: {ExternalCode}", ctx.Message.ExternalCode);
 
                     ctx.Saga.CorrelationId = ctx.Message.CorrelationId;
-
                     ctx.Saga.ExternalId = ctx.Message.ExternalCode;
-
                     ctx.Saga.Plate = ctx.Message.Plate;
                     ctx.Saga.Amount = ctx.Message.TotalValue;
                     ctx.Saga.OriginSystem = ctx.Message.OriginSystem;
@@ -44,6 +42,8 @@ public class SupplierBStateMachine : MassTransitStateMachine<InfringementState>
 
                     ctx.Saga.IsValid = isValid;
                     ctx.Saga.ValidationErrors = error;
+
+                    logger.LogInformation("Validação concluída. IsValid: {IsValid}", ctx.Saga.IsValid);
                 })
                 .IfElse(
                     ctx => ctx.Saga.IsValid,
@@ -65,7 +65,7 @@ public class SupplierBStateMachine : MassTransitStateMachine<InfringementState>
                             ctx.CancellationToken
                         );
 
-                        logger.LogInformation("Evento B Unificado enviado para o Kafka com sucesso.");
+                        logger.LogInformation("Mensagem enviada para o Kafka (Sucesso)!");
                     })
                     .Finalize(),
 
@@ -84,7 +84,7 @@ public class SupplierBStateMachine : MassTransitStateMachine<InfringementState>
                             ctx.CancellationToken
                         );
 
-                        logger.LogWarning("Evento B falhou na validação e foi enviado para DLQ.");
+                        logger.LogWarning("Mensagem enviada para o Kafka (DLQ)!");
                     })
                     .Finalize()
             )

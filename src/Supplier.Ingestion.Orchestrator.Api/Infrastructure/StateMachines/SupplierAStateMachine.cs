@@ -1,5 +1,6 @@
 ﻿using MassTransit;
 using Supplier.Ingestion.Orchestrator.Api.Domain.Events;
+using Supplier.Ingestion.Orchestrator.Api.Shared;
 
 namespace Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
 
@@ -21,7 +22,7 @@ public class SupplierAStateMachine : MassTransitStateMachine<InfringementState>
             When(InputReceived)
                 .Then(ctx =>
                 {
-                    logger.LogInformation("Saga Iniciada: {ExternalId}", ctx.Message.ExternalId);
+                    logger.LogInformation("Saga A Iniciada. ExternalId: {ExternalId}", ctx.Message.ExternalId);
 
                     ctx.Saga.CorrelationId = ctx.Message.CorrelationId;
                     ctx.Saga.ExternalId = ctx.Message.ExternalId;
@@ -31,12 +32,16 @@ public class SupplierAStateMachine : MassTransitStateMachine<InfringementState>
                     ctx.Saga.InfringementCode = ctx.Message.Infringement;
                     ctx.Saga.CreatedAt = DateTime.UtcNow;
 
-                    var errors = new List<string>();
-                    if (string.IsNullOrEmpty(ctx.Saga.Plate)) errors.Add("Placa invalida");
-                    if (ctx.Saga.Amount < 0) errors.Add("Valor invalido");
+                    var (isValid, error) = InfringementValidator.Validate(
+                        ctx.Saga.Plate,
+                        ctx.Saga.Amount,
+                        ctx.Saga.ExternalId
+                    );
 
-                    ctx.Saga.IsValid = errors.Count == 0;
-                    ctx.Saga.ValidationErrors = string.Join(",", errors);
+                    ctx.Saga.IsValid = isValid;
+                    ctx.Saga.ValidationErrors = error;
+
+                    logger.LogInformation("Validação concluída. IsValid: {IsValid}", ctx.Saga.IsValid);
                 })
                 .IfElse(
                     ctx => ctx.Saga.IsValid,
