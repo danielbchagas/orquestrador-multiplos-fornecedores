@@ -91,6 +91,12 @@ public class SupplierAStateMachineTests
             .With(x => x.TotalValue, -1)
             .Create();
 
+        var failedEvent = new InfringementValidationFailed(
+            inputEvent.ExternalId,
+            "SupplierA",
+            "Validation failed"
+        );
+
         _unifiedProducerMock
             .Setup(p => p.Produce(
                 It.IsAny<string>(),
@@ -101,7 +107,7 @@ public class SupplierAStateMachineTests
         _failedProducerMock
             .Setup(p => p.Produce(
                 It.IsAny<string>(),
-                It.IsAny<InfringementValidationFailed>(),
+                failedEvent,
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
@@ -119,7 +125,9 @@ public class SupplierAStateMachineTests
 
         _failedProducerMock.Verify(p => p.Produce(
                 inputEvent.ExternalId,
-                It.IsAny<InfringementValidationFailed>(),
+                It.Is<InfringementValidationFailed>(msg =>
+                    msg.OriginId == failedEvent.OriginId &&
+                    msg.FailureReason != failedEvent.FailureReason),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
