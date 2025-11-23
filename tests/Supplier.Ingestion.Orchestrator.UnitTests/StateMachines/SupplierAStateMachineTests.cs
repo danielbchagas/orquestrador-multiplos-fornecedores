@@ -41,7 +41,6 @@ public class SupplierAStateMachineTests
         var machine = provider.GetRequiredService<SupplierAStateMachine>();
         var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, InfringementState>();
 
-        var sagaId = Guid.NewGuid();
         var inputEvent = _fixture.Build<SupplierAInputReceived>()
             .With(x => x.TotalValue, 100) // Ensure amount is valid
             .Create();
@@ -50,6 +49,8 @@ public class SupplierAStateMachineTests
         await harness.Bus.Publish(inputEvent);
 
         // Assert
+        Assert.True(await sagaHarness.Consumed.Any<SupplierAInputReceived>());
+
         _unifiedProducerMock.Verify(p => p.Produce(
                 inputEvent.ExternalId,
                 It.Is<UnifiedInfringementProcessed>(msg =>
