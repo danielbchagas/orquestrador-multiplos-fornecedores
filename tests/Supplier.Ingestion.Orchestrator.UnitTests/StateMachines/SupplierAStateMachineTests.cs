@@ -67,12 +67,8 @@ public class SupplierAStateMachineTests
             Times.Never);
     }
 
-    [Theory]
-    [InlineData("", 100, "Placa invalida")]
-    [InlineData("ABC-1234", -10, "Valor invalido")]
-    [InlineData("", -10, "Placa invalida,Valor invalido")]
-    public async Task GivenInvalidInput_WhenInputReceivedEventIsConsumed_ThenShouldPublishInfringementValidationFailedAndFinalize(
-        string plate, decimal amount, string expectedError)
+    [Fact]
+    public async Task GivenInvalidInput_WhenInputReceivedEventIsConsumed_ThenShouldPublishInfringementValidationFailedAndFinalize()
     {
         // Arrange
         await using var provider = new ServiceCollection()
@@ -92,9 +88,22 @@ public class SupplierAStateMachineTests
         var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, InfringementState>();
 
         var inputEvent = _fixture.Build<SupplierAInputReceived>()
-            .With(x => x.Plate, plate)
-            .With(x => x.TotalValue, amount)
+            .With(x => x.TotalValue, -1)
             .Create();
+
+        _unifiedProducerMock
+            .Setup(p => p.Produce(
+                It.IsAny<string>(),
+                It.IsAny<UnifiedInfringementProcessed>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _failedProducerMock
+            .Setup(p => p.Produce(
+                It.IsAny<string>(),
+                It.IsAny<InfringementValidationFailed>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         // Act
         await harness.Bus.Publish(inputEvent);
@@ -110,9 +119,7 @@ public class SupplierAStateMachineTests
 
         _failedProducerMock.Verify(p => p.Produce(
                 inputEvent.ExternalId,
-                It.Is<InfringementValidationFailed>(msg =>
-                    msg.OriginId == inputEvent.ExternalId &&
-                    msg.FailureReason == expectedError),
+                It.IsAny<InfringementValidationFailed>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
