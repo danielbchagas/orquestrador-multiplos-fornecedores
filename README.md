@@ -20,6 +20,19 @@ A estrutura de diretórios do projeto está organizada da seguinte forma:
 
 ## Como Executar
 
+### Pré-requisitos
+
+Antes de executar o projeto, configure as variáveis de ambiente:
+
+1. Copie o arquivo `.env.example` para `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Edite o arquivo `.env` com suas credenciais do MongoDB (para desenvolvimento, os valores padrão já são suficientes).
+
+### Executar com Docker
+
 Para executar o projeto localmente utilizando o Docker:
 
 ```bash
