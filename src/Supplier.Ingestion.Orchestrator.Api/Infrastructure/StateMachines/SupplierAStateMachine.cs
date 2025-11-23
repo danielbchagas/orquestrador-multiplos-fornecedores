@@ -22,7 +22,7 @@ public class SupplierAStateMachine : MassTransitStateMachine<InfringementState>
             When(InputReceived)
                 .Then(ctx =>
                 {
-                    logger.LogInformation("Saga A Iniciada. Saga Iniciada: {ExternalId}", ctx.Message.ExternalId);
+                    logger.LogInformation("Saga A Iniciada. ExternalId: {ExternalId}", ctx.Message.ExternalId);
 
                     ctx.Saga.CorrelationId = ctx.Message.CorrelationId;
                     ctx.Saga.ExternalId = ctx.Message.ExternalId;
