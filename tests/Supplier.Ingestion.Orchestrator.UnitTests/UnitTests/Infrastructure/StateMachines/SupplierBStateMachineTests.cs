@@ -1,94 +1,97 @@
-﻿using AutoFixture;
+using AutoFixture;
 using MassTransit;
 using MassTransit.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Supplier.Ingestion.Orchestrator.Api.Domain.Events;
+using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
 using Supplier.Ingestion.Orchestrator.Api.Shared;
 
-namespace Supplier.Ingestion.Orchestrator.UnitTests.StateMachines;
+namespace Supplier.Ingestion.Orchestrator.Tests.UnitTests.Infrastructure.StateMachines;
 
-public class SupplierAStateMachineTests
+public class SupplierBStateMachineTests
 {
     private readonly IFixture _fixture = new Fixture();
     private readonly Mock<ITopicProducer<string, UnifiedInfringementProcessed>> _unifiedProducerMock;
     private readonly Mock<ITopicProducer<string, InfringementValidationFailed>> _failedProducerMock;
 
-    public SupplierAStateMachineTests()
+    public SupplierBStateMachineTests()
     {
         _unifiedProducerMock = new Mock<ITopicProducer<string, UnifiedInfringementProcessed>>();
         _failedProducerMock = new Mock<ITopicProducer<string, InfringementValidationFailed>>();
     }
 
     [Fact]
-    public async Task GivenValidInput_WhenInputReceivedEventIsConsumed_ThenShouldPublishUnifiedInfringementProcessedAndFinalize()
+    public async Task GivenValidInput_WhenInputReceived_ShouldProduceUnifiedMessageAndFinalize()
     {
         // Arrange
+        var loggerMock = new Mock<ILogger<SupplierBStateMachine>>();
+        
         await using var provider = new ServiceCollection()
-            .AddSingleton(Mock.Of<ILogger<SupplierAStateMachine>>())
+            .AddSingleton(loggerMock.Object)
             .AddSingleton(_unifiedProducerMock.Object)
             .AddSingleton(_failedProducerMock.Object)
             .AddMassTransitTestHarness(cfg =>
             {
-                cfg.AddSagaStateMachine<SupplierAStateMachine, InfringementState>();
+                cfg.AddSagaStateMachine<SupplierBStateMachine, InfringementState>();
             })
             .BuildServiceProvider(true);
 
-        var harness = provider.GetRequiredService<ITestHarness>();
-        await harness.Start();
+        var sagaHarness = provider.GetRequiredService<ITestHarness>();
+        await sagaHarness.Start();
 
-        var machine = provider.GetRequiredService<SupplierAStateMachine>();
-        var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, InfringementState>();
-
-        var inputEvent = _fixture.Build<SupplierAInputReceived>()
-            .With(x => x.TotalValue, 100) // Ensure amount is valid
-            .Create();
+        var inputEvent = new SupplierBInputReceived(
+            _fixture.Create<string>(),
+            "ABC1234",
+            _fixture.Create<int>(),
+            _fixture.Create<decimal>() + 1 // Ensure positive
+        );
 
         // Act
-        await harness.Bus.Publish(inputEvent);
+        await sagaHarness.Bus.Publish(inputEvent);
 
         // Assert
-        Assert.True(await sagaHarness.Consumed.Any<SupplierAInputReceived>());
+        Assert.True(await sagaHarness.Consumed.Any<SupplierBInputReceived>());
 
-        _unifiedProducerMock.Verify(p => p.Produce(
-                inputEvent.ExternalId,
-                It.Is<UnifiedInfringementProcessed>(msg =>
-                    msg.OriginId == inputEvent.ExternalId &&
-                    msg.Plate == inputEvent.Plate &&
-                    msg.Amount == inputEvent.TotalValue),
+        _unifiedProducerMock.Verify(
+            p => p.Produce(
+                inputEvent.ExternalCode,
+                It.Is<UnifiedInfringementProcessed>(m =>
+                    m.OriginId == inputEvent.ExternalCode &&
+                    m.Plate == inputEvent.Plate &&
+                    m.InfringementCode == inputEvent.Infringement &&
+                    m.Amount == inputEvent.TotalValue &&
+                    m.SourceSystem == inputEvent.OriginSystem
+                ),
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
-        _failedProducerMock.Verify(p => p.Produce(
-                It.IsAny<string>(),
-                It.IsAny<InfringementValidationFailed>(),
-                It.IsAny<CancellationToken>()),
+        _failedProducerMock.Verify(
+            p => p.Produce(It.IsAny<string>(), It.IsAny<InfringementValidationFailed>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
     [Fact]
-    public async Task GivenInvalidInput_WhenInputReceivedEventIsConsumed_ThenShouldPublishInfringementValidationFailedAndFinalize()
+    public async Task GivenInvalidInput_WhenInputReceived_ShouldProduceValidationFailedMessageAndFinalize()
     {
         // Arrange
+        var loggerMock = new Mock<ILogger<SupplierBStateMachine>>();
+        
         await using var provider = new ServiceCollection()
-            .AddSingleton(Mock.Of<ILogger<SupplierAStateMachine>>())
+            .AddSingleton(loggerMock.Object)
             .AddSingleton(_unifiedProducerMock.Object)
             .AddSingleton(_failedProducerMock.Object)
             .AddMassTransitTestHarness(cfg =>
             {
-                cfg.AddSagaStateMachine<SupplierAStateMachine, InfringementState>();
+                cfg.AddSagaStateMachine<SupplierBStateMachine, InfringementState>();
             })
             .BuildServiceProvider(true);
 
-        var harness = provider.GetRequiredService<ITestHarness>();
-        await harness.Start();
+        var sagaHarness = provider.GetRequiredService<ITestHarness>();
+        await sagaHarness.Start();
 
-        var machine = provider.GetRequiredService<SupplierAStateMachine>();
-        var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, InfringementState>();
-
-        var inputEvent = _fixture.Build<SupplierAInputReceived>()
+        var inputEvent = _fixture.Build<SupplierBInputReceived>()
             .With(x => x.TotalValue, -1)
             .Create();
 
@@ -107,10 +110,10 @@ public class SupplierAStateMachineTests
             .Returns(Task.CompletedTask);
 
         // Act
-        await harness.Bus.Publish(inputEvent);
+        await sagaHarness.Bus.Publish(inputEvent);
 
         // Assert
-        Assert.True(await sagaHarness.Consumed.Any<SupplierAInputReceived>());
+        Assert.True(await sagaHarness.Consumed.Any<SupplierBInputReceived>());
 
         _unifiedProducerMock.Verify(p => p.Produce(
                 It.IsAny<string>(),
@@ -119,7 +122,7 @@ public class SupplierAStateMachineTests
             Times.Never);
 
         _failedProducerMock.Verify(p => p.Produce(
-                inputEvent.ExternalId,
+                inputEvent.ExternalCode,
                 It.IsAny<InfringementValidationFailed>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);

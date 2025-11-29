@@ -1,4 +1,4 @@
-﻿namespace Supplier.Ingestion.Orchestrator.Api.Domain.Events;
+﻿namespace Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 
 public record SupplierBInputReceived : IntegrationEvent
 {

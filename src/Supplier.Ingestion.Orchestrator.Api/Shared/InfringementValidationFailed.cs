@@ -1,4 +1,4 @@
-﻿using Supplier.Ingestion.Orchestrator.Api.Domain.Events;
+﻿using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 
 namespace Supplier.Ingestion.Orchestrator.Api.Shared;
 
