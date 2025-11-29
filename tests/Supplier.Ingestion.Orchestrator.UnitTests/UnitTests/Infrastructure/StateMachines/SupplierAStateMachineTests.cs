@@ -4,11 +4,11 @@ using MassTransit.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Supplier.Ingestion.Orchestrator.Api.Domain.Events;
+using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
 using Supplier.Ingestion.Orchestrator.Api.Shared;
 
-namespace Supplier.Ingestion.Orchestrator.UnitTests.StateMachines;
+namespace Supplier.Ingestion.Orchestrator.Tests.UnitTests.Infrastructure.StateMachines;
 
 public class SupplierAStateMachineTests
 {
