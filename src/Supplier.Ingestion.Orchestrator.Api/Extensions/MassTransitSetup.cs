@@ -1,6 +1,7 @@
 ﻿using MassTransit;
 using Supplier.Ingestion.Orchestrator.Api.Domain.Events;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
+using Supplier.Ingestion.Orchestrator.Api.Shared;
 
 namespace Supplier.Ingestion.Orchestrator.Api.Extensions;
 
