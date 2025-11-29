@@ -18,6 +18,21 @@ A estrutura de diretórios do projeto está organizada da seguinte forma:
 - **docs/**: Documentação complementar e diagramas de arquitetura.
 - **docker-compose.yml**: Arquivo para orquestração de containers Docker, facilitando a execução do ambiente local.
 
+## Tecnologias Utilizadas
+O projeto utiliza as seguintes tecnologias e bibliotecas principais:
+- **.NET 10**: Plataforma de desenvolvimento utilizada para construir a API.
+- **MassTransit**: Biblioteca para comunicação assíncrona via mensagens.
+- **MongoDB**: Banco de dados NoSQL utilizado para armazenamento de dados.
+
+## Bibliotecas de Teste
+
+Para garantir a qualidade e o correto funcionamento do código, o projeto utiliza as seguintes bibliotecas de teste:
+
+- **xUnit**: Framework de teste para execução de testes unitários.
+- **Moq**: Biblioteca para criação de objetos de simulação (mocks).
+- **AutoFixture**: Ferramenta para geração de dados de teste anônimos.
+- **MassTransit.TestHarness**: Utilitário para testar sagas e consumidores do MassTransit em memória.
+
 ## Como Executar
 
 Para executar o projeto localmente utilizando o Docker:
