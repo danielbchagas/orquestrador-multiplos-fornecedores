@@ -11,7 +11,4 @@
   <Folder Name="/tests/">
     <Project Path="tests/Supplier.Ingestion.Orchestrator.UnitTests/Supplier.Ingestion.Orchestrator.UnitTests.csproj" Id="6e30caff-13b5-43b2-a41c-797e4d076453" />
   </Folder>
-  <Project Path="docker-compose.dcproj">
-    <Build />
-  </Project>
 </Solution>
