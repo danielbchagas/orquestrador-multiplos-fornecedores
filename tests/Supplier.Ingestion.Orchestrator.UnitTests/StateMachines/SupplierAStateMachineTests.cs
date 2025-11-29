@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Supplier.Ingestion.Orchestrator.Api.Domain.Events;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
+using Supplier.Ingestion.Orchestrator.Api.Shared;
 
 namespace Supplier.Ingestion.Orchestrator.UnitTests.StateMachines;
 
