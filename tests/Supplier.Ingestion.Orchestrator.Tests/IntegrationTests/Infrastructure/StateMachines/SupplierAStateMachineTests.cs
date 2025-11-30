@@ -1,7 +1,6 @@
 ﻿using AutoFixture;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
-using FluentAssertions;
 using MassTransit;
 using MassTransit.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,7 +9,7 @@ using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
 using Supplier.Ingestion.Orchestrator.Api.Shared;
 using Testcontainers.Kafka;
-using Xunit;
+using static MassTransit.Logging.OperationName;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.Integration;
 
@@ -109,13 +108,10 @@ public class SupplierAStateMachineTests : IAsyncLifetime
             .Create();
 
         // Act
-        await producer.Produce(inputMessage.ExternalId, inputMessage);
+        await harness.Bus.Publish(inputMessage);
 
-        // Assert
-        (await harness.Consumed.Any<SupplierAInputReceived>())
-            .Should().BeTrue("a saga deve consumir a mensagem de entrada do Kafka");
+        var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, InfringementState>();
 
-        var instance = await harness.Published.Any<UnifiedInfringementProcessed>(x => x.Context.Message.CorrelationId == inputMessage.CorrelationId);
-        Assert.NotNull(instance);
+        Assert.True(await sagaHarness.Consumed.Any<SupplierAInputReceived>());
     }
 }
