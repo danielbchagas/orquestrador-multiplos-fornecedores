@@ -27,7 +27,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="IntegrationTests\Infrastructure\StateMachines\" />
     <Folder Include="LoadTests\" />
     <Folder Include="FunctionalTests\" />
   </ItemGroup>
