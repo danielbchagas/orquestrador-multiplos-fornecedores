@@ -9,7 +9,6 @@ using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
 using Supplier.Ingestion.Orchestrator.Api.Shared;
 using Testcontainers.Kafka;
-using static MassTransit.Logging.OperationName;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.Integration;
 
@@ -113,5 +112,7 @@ public class SupplierAStateMachineTests : IAsyncLifetime
         var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, InfringementState>();
 
         Assert.True(await sagaHarness.Consumed.Any<SupplierAInputReceived>());
+
+        await DisposeAsync();
     }
 }
