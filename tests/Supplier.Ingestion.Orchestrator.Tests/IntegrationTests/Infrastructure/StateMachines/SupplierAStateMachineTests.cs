@@ -111,11 +111,10 @@ public class SupplierAStateMachineTests : IAsyncLifetime
         await harness.Bus.Publish(inputMessage);
 
         var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, InfringementState>();
+        var message = sagaHarness.Sagas.Contains(inputMessage.CorrelationId);
 
         // Assert
         Assert.True(await sagaHarness.Consumed.Any<SupplierAInputReceived>());
-
-        var message = sagaHarness.Sagas.Contains(inputMessage.CorrelationId);
         
         message.Should().NotBeNull("A saga deve existir com o CorrelationId fornecido.");
         message.CorrelationId.Should().Be(inputMessage.CorrelationId, "O CorrelationId da saga deve corresponder ao do evento publicado.");
