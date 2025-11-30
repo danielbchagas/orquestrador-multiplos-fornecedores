@@ -111,6 +111,7 @@ public class SupplierAStateMachineTests : IAsyncLifetime
 
         var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, InfringementState>();
 
+        // Assert
         Assert.True(await sagaHarness.Consumed.Any<SupplierAInputReceived>());
 
         await DisposeAsync();
