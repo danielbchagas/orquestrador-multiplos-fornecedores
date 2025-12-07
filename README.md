@@ -1,10 +1,12 @@
 # Orquestrador de Múltiplos Fornecedores
 
-## Introdução
+## 📋 Introdução
 
-Este projeto é uma API desenvolvida em .NET responsável por orquestrar a ingestão de dados de múltiplos fornecedores. O sistema visa centralizar e gerenciar o processo de recebimento e processamento de informações, garantindo consistência e confiabilidade.
+Este projeto é uma API desenvolvida em .NET responsável por orquestrar a ingestão de dados de múltiplos fornecedores. O sistema centraliza e gerencia o processo de recebimento e processamento de informações, garantindo consistência e confiabilidade.
 
-## Estrutura do Projeto
+---
+
+## 🗂️ Estrutura do Projeto
 
 A estrutura de diretórios do projeto está organizada da seguinte forma:
 
@@ -18,31 +20,89 @@ A estrutura de diretórios do projeto está organizada da seguinte forma:
 - **docs/**: Documentação complementar e diagramas de arquitetura.
 - **docker-compose.yml**: Arquivo para orquestração de containers Docker, facilitando a execução do ambiente local.
 
-## Tecnologias Utilizadas
-O projeto utiliza as seguintes tecnologias e bibliotecas principais:
-- **.NET 10**: Plataforma de desenvolvimento utilizada para construir a API.
-- **MassTransit**: Biblioteca para comunicação assíncrona via mensagens.
-- **MongoDB**: Banco de dados NoSQL utilizado para armazenamento de dados.
+---
 
-## Bibliotecas de Teste
+## 🛠️ Tecnologias Utilizadas
 
-Para garantir a qualidade e o correto funcionamento do código, o projeto utiliza as seguintes bibliotecas de teste:
+- **.NET 10**: Plataforma principal da API
+- **MassTransit**: Comunicação assíncrona via mensagens
+- **MongoDB**: Banco de dados NoSQL
 
-- **xUnit**: Framework de teste para execução de testes unitários.
-- **Moq**: Biblioteca para criação de objetos de simulação (mocks).
-- **AutoFixture**: Ferramenta para geração de dados de teste anônimos.
-- **MassTransit.TestHarness**: Utilitário para testar sagas e consumidores do MassTransit em memória.
+---
 
-## Como Executar
+## 🧪 Bibliotecas de Teste
 
-Para executar o projeto localmente utilizando o Docker:
+- **xUnit**: Execução de testes unitários
+- **Moq**: Criação de objetos simulados (mocks)
+- **AutoFixture**: Geração de dados de teste anônimos
+- **MassTransit.TestHarness**: Testes de sagas e consumidores MassTransit em memória
 
+---
+
+## ▶️ Como Executar
+
+**Via Docker:**
 ```bash
 docker-compose up -d
 ```
 
-Ou via .NET CLI na pasta do projeto da API:
-
+**Via .NET CLI:**
 ```bash
 dotnet run --project src/Supplier.Ingestion.Orchestrator.Api
 ```
+
+---
+
+## 🕹️ Exemplos de Eventos
+
+### Fornecedor A
+
+**Evento válido**
+```
+{
+  "ExternalId": "TESTE-FIXO-HASH",
+  "Plate": "ABC-1234",
+  "Infringement": 7455,
+  "TotalValue": 100.00
+}
+```
+Destino: `target.dados.processados.v1`
+
+**Evento inválido**
+```
+{
+  "ExternalId": "TESTE-FIXO-HASH",
+  "Plate": "ABC-1234",
+  "Infringement": 7455,
+  "TotalValue": -100.00
+}
+```
+Destino: `target.dados.invalidos.v1`
+
+---
+
+### Fornecedor B
+
+**Evento válido**
+```
+{
+  "ExternalCode": "PEDIDO-B-FINAL-900",
+  "Plate": "BBB-8888",
+  "Infringement": 6050,
+  "TotalValue": 355.50,
+  "OriginSystem": "LEGADO_B"
+}
+```
+Destino: `target.dados.processados.v1`
+
+**Evento inválido**
+```
+{
+  "ExternalCode": "PEDIDO-B-FINAL-900",
+  "Plate": "BBB-8888",
+  "Infringement": 6050,
+  "TotalValue": -355.50,
+  "OriginSystem": "LEGADO_B"
+}
+```
+Destino: `target.dados.invalidos.v1`
