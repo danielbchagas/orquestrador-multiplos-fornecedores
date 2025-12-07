@@ -1,4 +1,4 @@
-﻿namespace Supplier.Ingestion.Orchestrator.Api.Shared;
+﻿namespace Supplier.Ingestion.Orchestrator.Api.Validators;
 
 public class InfringementValidator
 {
@@ -17,6 +17,6 @@ public class InfringementValidator
 
         return errors.Any()
             ? (false, string.Join(" | ", errors))
-            : (true, null);
+            : (true, string.Empty);
     }
 }

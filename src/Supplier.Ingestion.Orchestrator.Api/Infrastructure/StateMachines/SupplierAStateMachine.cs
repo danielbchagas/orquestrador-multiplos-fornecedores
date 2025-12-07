@@ -1,10 +1,10 @@
 ﻿using MassTransit;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
-using Supplier.Ingestion.Orchestrator.Api.Shared;
+using Supplier.Ingestion.Orchestrator.Api.Validators;
 
 namespace Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
 
-public class SupplierAStateMachine : MassTransitStateMachine<InfringementState>
+public class SupplierAStateMachine : MassTransitStateMachine<SupplierState>
 {
     public Event<SupplierAInputReceived> InputReceived { get; private set; }
 
@@ -22,10 +22,10 @@ public class SupplierAStateMachine : MassTransitStateMachine<InfringementState>
             When(InputReceived)
                 .Then(ctx =>
                 {
-                    logger.LogInformation("Saga A Iniciada. ExternalId: {ExternalId}", ctx.Message.ExternalId);
+                    logger.LogInformation("Saga A Iniciada. ExternalId: {ExternalId}", ctx.Message.ExternalCode);
 
                     ctx.Saga.CorrelationId = ctx.Message.CorrelationId;
-                    ctx.Saga.ExternalId = ctx.Message.ExternalId;
+                    ctx.Saga.ExternalId = ctx.Message.ExternalCode;
                     ctx.Saga.Plate = ctx.Message.Plate;
                     ctx.Saga.Amount = ctx.Message.TotalValue;
                     ctx.Saga.OriginSystem = ctx.Message.OriginSystem;

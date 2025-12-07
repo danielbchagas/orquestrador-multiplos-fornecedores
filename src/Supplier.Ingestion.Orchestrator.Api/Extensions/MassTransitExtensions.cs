@@ -1,23 +1,22 @@
 ﻿using MassTransit;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
-using Supplier.Ingestion.Orchestrator.Api.Shared;
 
 namespace Supplier.Ingestion.Orchestrator.Api.Extensions;
 
-public static class MassTransitSetup
+public static class MassTransitExtensions
 {
-    public static IServiceCollection AddCustomMassTransit(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddMassTransitExtensions(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddMassTransit(x =>
         {
             GlobalTopology.Send.UseCorrelationId<SupplierAInputReceived>(msg => msg.CorrelationId);
             GlobalTopology.Send.UseCorrelationId<SupplierBInputReceived>(msg => msg.CorrelationId);
 
-            x.AddSagaStateMachine<SupplierAStateMachine, InfringementState>();
-            x.AddSagaStateMachine<SupplierBStateMachine, InfringementState>();
+            x.AddSagaStateMachine<SupplierAStateMachine, SupplierState>();
+            x.AddSagaStateMachine<SupplierBStateMachine, SupplierState>();
 
-            x.AddSagaRepository<InfringementState>()
+            x.AddSagaRepository<SupplierState>()
                 .MongoDbRepository(r =>
                 {
                     r.Connection = configuration.GetConnectionString("MongoDb");

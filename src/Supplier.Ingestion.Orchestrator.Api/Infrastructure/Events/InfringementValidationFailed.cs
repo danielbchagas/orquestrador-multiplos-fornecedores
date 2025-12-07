@@ -1,6 +1,4 @@
-﻿using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
-
-namespace Supplier.Ingestion.Orchestrator.Api.Shared;
+﻿namespace Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 
 public record InfringementValidationFailed : IntegrationEvent
 {

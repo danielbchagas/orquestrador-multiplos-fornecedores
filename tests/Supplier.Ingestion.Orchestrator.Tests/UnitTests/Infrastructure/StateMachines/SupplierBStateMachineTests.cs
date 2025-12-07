@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
-using Supplier.Ingestion.Orchestrator.Api.Shared;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.UnitTests.Infrastructure.StateMachines;
 
@@ -34,7 +33,7 @@ public class SupplierBStateMachineTests
             .AddSingleton(_failedProducerMock.Object)
             .AddMassTransitTestHarness(cfg =>
             {
-                cfg.AddSagaStateMachine<SupplierBStateMachine, InfringementState>();
+                cfg.AddSagaStateMachine<SupplierBStateMachine, SupplierState>();
             })
             .BuildServiceProvider(true);
 
@@ -84,7 +83,7 @@ public class SupplierBStateMachineTests
             .AddSingleton(_failedProducerMock.Object)
             .AddMassTransitTestHarness(cfg =>
             {
-                cfg.AddSagaStateMachine<SupplierBStateMachine, InfringementState>();
+                cfg.AddSagaStateMachine<SupplierBStateMachine, SupplierState>();
             })
             .BuildServiceProvider(true);
 
