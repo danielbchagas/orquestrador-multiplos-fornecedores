@@ -8,7 +8,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
-using Supplier.Ingestion.Orchestrator.Api.Shared;
 using Testcontainers.Kafka;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.Integration;
@@ -69,7 +68,7 @@ public class SupplierAStateMachineTests : IAsyncLifetime
             .AddLogging(l => l.AddConsole()) // Ajuda a debugar
             .AddMassTransitTestHarness(x =>
             {
-                x.AddSagaStateMachine<SupplierAStateMachine, InfringementState>()
+                x.AddSagaStateMachine<SupplierAStateMachine, SupplierState>()
                  .InMemoryRepository();
 
                 x.AddRider(rider =>
@@ -86,7 +85,7 @@ public class SupplierAStateMachineTests : IAsyncLifetime
                         k.TopicEndpoint<SupplierAInputReceived>(topicInput, consumerGroup, e =>
                         {
                             var stateMachine = context.GetRequiredService<SupplierAStateMachine>();
-                            var repository = context.GetRequiredService<ISagaRepository<InfringementState>>();
+                            var repository = context.GetRequiredService<ISagaRepository<SupplierState>>();
 
                             e.StateMachineSaga(stateMachine, repository);
 
@@ -110,7 +109,7 @@ public class SupplierAStateMachineTests : IAsyncLifetime
         // Act
         await harness.Bus.Publish(inputMessage);
 
-        var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, InfringementState>();
+        var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, SupplierState>();
         var message = sagaHarness.Sagas.Contains(inputMessage.CorrelationId);
 
         // Assert
@@ -118,7 +117,7 @@ public class SupplierAStateMachineTests : IAsyncLifetime
         
         message.Should().NotBeNull("A saga deve existir com o CorrelationId fornecido.");
         message.CorrelationId.Should().Be(inputMessage.CorrelationId, "O CorrelationId da saga deve corresponder ao do evento publicado.");
-        message.ExternalId.Should().Be(inputMessage.ExternalId, "O ExternalId deve ser copiado corretamente do evento para o estado da saga.");
+        message.ExternalId.Should().Be(inputMessage.ExternalCode, "O ExternalCode deve ser copiado corretamente do evento para o estado da saga.");
         message.Plate.Should().Be(inputMessage.Plate, "A placa deve ser copiada corretamente do evento para o estado da saga.");
         message.InfringementCode.Should().Be(inputMessage.Infringement, "O código de infração deve ser copiado corretamente do evento para o estado da saga.");
         message.Amount.Should().Be(inputMessage.TotalValue, "O valor total deve ser copiado corretamente do evento para o estado da saga.");

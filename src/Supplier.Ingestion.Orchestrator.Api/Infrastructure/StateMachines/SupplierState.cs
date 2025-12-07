@@ -3,7 +3,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
 
-public class InfringementState : SagaStateMachineInstance, ISagaVersion
+public class SupplierState : SagaStateMachineInstance, ISagaVersion
 {
     [BsonId]
     public Guid CorrelationId { get; set; }

@@ -60,10 +60,11 @@ dotnet run --project src/Supplier.Ingestion.Orchestrator.Api
 **Evento válido**
 ```
 {
-  "ExternalId": "TESTE-FIXO-HASH",
+  "ExternalCode": "TESTE-FIXO-HASH",
   "Plate": "ABC-1234",
   "Infringement": 7455,
-  "TotalValue": 100.00
+  "TotalValue": 100.00,
+  "OriginSystem": "Fornecedor_A"
 }
 ```
 Destino: `target.dados.processados.v1`
@@ -71,10 +72,11 @@ Destino: `target.dados.processados.v1`
 **Evento inválido**
 ```
 {
-  "ExternalId": "TESTE-FIXO-HASH",
+  "ExternalCode": "TESTE-FIXO-HASH",
   "Plate": "ABC-1234",
   "Infringement": 7455,
-  "TotalValue": -100.00
+  "TotalValue": -100.00,
+  "OriginSystem": "Fornecedor_A"
 }
 ```
 Destino: `target.dados.invalidos.v1`
@@ -90,7 +92,7 @@ Destino: `target.dados.invalidos.v1`
   "Plate": "BBB-8888",
   "Infringement": 6050,
   "TotalValue": 355.50,
-  "OriginSystem": "LEGADO_B"
+  "OriginSystem": "Fornecedor_B"
 }
 ```
 Destino: `target.dados.processados.v1`
@@ -102,7 +104,7 @@ Destino: `target.dados.processados.v1`
   "Plate": "BBB-8888",
   "Infringement": 6050,
   "TotalValue": -355.50,
-  "OriginSystem": "LEGADO_B"
+  "OriginSystem": "Fornecedor_B"
 }
 ```
 Destino: `target.dados.invalidos.v1`
