@@ -117,7 +117,7 @@ public class SupplierAStateMachineTests : IAsyncLifetime
         
         message.Should().NotBeNull("A saga deve existir com o CorrelationId fornecido.");
         message.CorrelationId.Should().Be(inputMessage.CorrelationId, "O CorrelationId da saga deve corresponder ao do evento publicado.");
-        message.ExternalId.Should().Be(inputMessage.ExternalId, "O ExternalId deve ser copiado corretamente do evento para o estado da saga.");
+        message.ExternalId.Should().Be(inputMessage.ExternalCode, "O ExternalCode deve ser copiado corretamente do evento para o estado da saga.");
         message.Plate.Should().Be(inputMessage.Plate, "A placa deve ser copiada corretamente do evento para o estado da saga.");
         message.InfringementCode.Should().Be(inputMessage.Infringement, "O código de infração deve ser copiado corretamente do evento para o estado da saga.");
         message.Amount.Should().Be(inputMessage.TotalValue, "O valor total deve ser copiado corretamente do evento para o estado da saga.");

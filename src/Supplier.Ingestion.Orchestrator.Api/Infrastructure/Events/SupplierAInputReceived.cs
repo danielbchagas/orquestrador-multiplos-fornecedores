@@ -3,19 +3,19 @@
 public record SupplierAInputReceived : IntegrationEvent
 {
     public SupplierAInputReceived(
-        string externalId,
+        string externalCode,
         string plate,
         int infringement,
         decimal totalValue)
-        : base(externalId)
+        : base(externalCode)
     {
-        ExternalId = externalId;
+        ExternalCode = externalCode;
         Plate = plate;
         Infringement = infringement;
         TotalValue = totalValue;
     }
 
-    public string ExternalId { get; init; }
+    public string ExternalCode { get; init; }
     public string Plate { get; init; }
     public int Infringement { get; init; }
     public decimal TotalValue { get; init; }

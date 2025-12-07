@@ -52,9 +52,9 @@ public class SupplierAStateMachineTests
         Assert.True(await sagaHarness.Consumed.Any<SupplierAInputReceived>());
 
         _unifiedProducerMock.Verify(p => p.Produce(
-                inputEvent.ExternalId,
+                inputEvent.ExternalCode,
                 It.Is<UnifiedInfringementProcessed>(msg =>
-                    msg.OriginId == inputEvent.ExternalId &&
+                    msg.OriginId == inputEvent.ExternalCode &&
                     msg.Plate == inputEvent.Plate &&
                     msg.Amount == inputEvent.TotalValue),
                 It.IsAny<CancellationToken>()),
@@ -118,7 +118,7 @@ public class SupplierAStateMachineTests
             Times.Never);
 
         _failedProducerMock.Verify(p => p.Produce(
-                inputEvent.ExternalId,
+                inputEvent.ExternalCode,
                 It.IsAny<InfringementValidationFailed>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
