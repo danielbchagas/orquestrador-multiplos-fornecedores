@@ -31,7 +31,7 @@ public class SupplierAStateMachineTests
             .AddSingleton(_failedProducerMock.Object)
             .AddMassTransitTestHarness(cfg =>
             {
-                cfg.AddSagaStateMachine<SupplierAStateMachine, InfringementState>();
+                cfg.AddSagaStateMachine<SupplierAStateMachine, SupplierState>();
             })
             .BuildServiceProvider(true);
 
@@ -39,7 +39,7 @@ public class SupplierAStateMachineTests
         await harness.Start();
 
         var machine = provider.GetRequiredService<SupplierAStateMachine>();
-        var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, InfringementState>();
+        var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, SupplierState>();
 
         var inputEvent = _fixture.Build<SupplierAInputReceived>()
             .With(x => x.TotalValue, 100) // Ensure amount is valid
@@ -77,7 +77,7 @@ public class SupplierAStateMachineTests
             .AddSingleton(_failedProducerMock.Object)
             .AddMassTransitTestHarness(cfg =>
             {
-                cfg.AddSagaStateMachine<SupplierAStateMachine, InfringementState>();
+                cfg.AddSagaStateMachine<SupplierAStateMachine, SupplierState>();
             })
             .BuildServiceProvider(true);
 
@@ -85,7 +85,7 @@ public class SupplierAStateMachineTests
         await harness.Start();
 
         var machine = provider.GetRequiredService<SupplierAStateMachine>();
-        var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, InfringementState>();
+        var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, SupplierState>();
 
         var inputEvent = _fixture.Build<SupplierAInputReceived>()
             .With(x => x.TotalValue, -1)

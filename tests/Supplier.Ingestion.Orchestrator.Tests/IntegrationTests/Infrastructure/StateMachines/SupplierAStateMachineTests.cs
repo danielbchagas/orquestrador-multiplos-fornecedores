@@ -68,7 +68,7 @@ public class SupplierAStateMachineTests : IAsyncLifetime
             .AddLogging(l => l.AddConsole()) // Ajuda a debugar
             .AddMassTransitTestHarness(x =>
             {
-                x.AddSagaStateMachine<SupplierAStateMachine, InfringementState>()
+                x.AddSagaStateMachine<SupplierAStateMachine, SupplierState>()
                  .InMemoryRepository();
 
                 x.AddRider(rider =>
@@ -85,7 +85,7 @@ public class SupplierAStateMachineTests : IAsyncLifetime
                         k.TopicEndpoint<SupplierAInputReceived>(topicInput, consumerGroup, e =>
                         {
                             var stateMachine = context.GetRequiredService<SupplierAStateMachine>();
-                            var repository = context.GetRequiredService<ISagaRepository<InfringementState>>();
+                            var repository = context.GetRequiredService<ISagaRepository<SupplierState>>();
 
                             e.StateMachineSaga(stateMachine, repository);
 
@@ -109,7 +109,7 @@ public class SupplierAStateMachineTests : IAsyncLifetime
         // Act
         await harness.Bus.Publish(inputMessage);
 
-        var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, InfringementState>();
+        var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, SupplierState>();
         var message = sagaHarness.Sagas.Contains(inputMessage.CorrelationId);
 
         // Assert

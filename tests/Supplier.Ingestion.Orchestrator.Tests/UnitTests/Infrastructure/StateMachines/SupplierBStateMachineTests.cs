@@ -33,7 +33,7 @@ public class SupplierBStateMachineTests
             .AddSingleton(_failedProducerMock.Object)
             .AddMassTransitTestHarness(cfg =>
             {
-                cfg.AddSagaStateMachine<SupplierBStateMachine, InfringementState>();
+                cfg.AddSagaStateMachine<SupplierBStateMachine, SupplierState>();
             })
             .BuildServiceProvider(true);
 
@@ -83,7 +83,7 @@ public class SupplierBStateMachineTests
             .AddSingleton(_failedProducerMock.Object)
             .AddMassTransitTestHarness(cfg =>
             {
-                cfg.AddSagaStateMachine<SupplierBStateMachine, InfringementState>();
+                cfg.AddSagaStateMachine<SupplierBStateMachine, SupplierState>();
             })
             .BuildServiceProvider(true);
 
