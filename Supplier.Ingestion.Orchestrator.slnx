@@ -3,7 +3,11 @@
     <File Path="docs/Diagram.png" />
   </Folder>
   <Folder Name="/files/">
+    <File Path="files/datasources.yaml" />
     <File Path="files/docker-compose.yml" />
+    <File Path="files/loki.yaml" />
+    <File Path="files/otel-collector-config.yaml" />
+    <File Path="files/prometheus.yaml" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Supplier.Ingestion.Orchestrator.Api/Supplier.Ingestion.Orchestrator.Api.csproj" Id="12af1ce2-647a-41b3-bed4-e6be2fa2a365" />
