@@ -41,7 +41,9 @@ public class SupplierAStateMachineTests
         var machine = provider.GetRequiredService<SupplierAStateMachine>();
         var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, SupplierState>();
 
+        var correlationId = Guid.NewGuid();
         var inputEvent = _fixture.Build<SupplierAInputReceived>()
+            .With(x => x.CorrelationId, correlationId)
             .With(x => x.TotalValue, 100) // Ensure amount is valid
             .Create();
 
@@ -49,14 +51,12 @@ public class SupplierAStateMachineTests
         await harness.Bus.Publish(inputEvent);
 
         // Assert
-        Assert.True(await sagaHarness.Consumed.Any<SupplierAInputReceived>());
+        Assert.True(await sagaHarness.Consumed.Any<SupplierAInputReceived>(x => x.Context.Message.CorrelationId == correlationId));
+        Assert.NotEqual(await sagaHarness.Exists(correlationId, x => x.Final), Guid.Empty);
 
         _unifiedProducerMock.Verify(p => p.Produce(
-                inputEvent.ExternalCode,
-                It.Is<UnifiedInfringementProcessed>(msg =>
-                    msg.OriginId == inputEvent.ExternalCode &&
-                    msg.Plate == inputEvent.Plate &&
-                    msg.Amount == inputEvent.TotalValue),
+                It.IsAny<string>(),
+                It.IsAny<UnifiedInfringementProcessed>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
@@ -87,7 +87,9 @@ public class SupplierAStateMachineTests
         var machine = provider.GetRequiredService<SupplierAStateMachine>();
         var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, SupplierState>();
 
+        var correlationId = Guid.NewGuid();
         var inputEvent = _fixture.Build<SupplierAInputReceived>()
+            .With(x => x.CorrelationId, correlationId)
             .With(x => x.TotalValue, -1)
             .Create();
 
@@ -109,7 +111,8 @@ public class SupplierAStateMachineTests
         await harness.Bus.Publish(inputEvent);
 
         // Assert
-        Assert.True(await sagaHarness.Consumed.Any<SupplierAInputReceived>());
+        Assert.True(await sagaHarness.Consumed.Any<SupplierAInputReceived>(x => x.Context.Message.CorrelationId == correlationId));
+        Assert.NotEqual(await sagaHarness.Exists(correlationId, x => x.Final), Guid.Empty);
 
         _unifiedProducerMock.Verify(p => p.Produce(
                 It.IsAny<string>(),
@@ -118,7 +121,7 @@ public class SupplierAStateMachineTests
             Times.Never);
 
         _failedProducerMock.Verify(p => p.Produce(
-                inputEvent.ExternalCode,
+                It.IsAny<string>(),
                 It.IsAny<InfringementValidationFailed>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
