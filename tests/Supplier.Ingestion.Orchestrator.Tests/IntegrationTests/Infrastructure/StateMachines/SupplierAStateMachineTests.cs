@@ -39,9 +39,9 @@ public class SupplierAStateMachineTests : IAsyncLifetime
         {
             await adminClient.CreateTopicsAsync(new[]
             {
-                new TopicSpecification { Name = "source.fornecedor-a.v1", NumPartitions = 1, ReplicationFactor = 1 },
-                new TopicSpecification { Name = "target.dados.processados.v1", NumPartitions = 1, ReplicationFactor = 1 },
-                new TopicSpecification { Name = "target.dados.invalidos.v1", NumPartitions = 1, ReplicationFactor = 1 }
+                new TopicSpecification { Name = "integration-source.fornecedor-a.v1", NumPartitions = 1, ReplicationFactor = 1 },
+                new TopicSpecification { Name = "integration-target.dados.processados.v1", NumPartitions = 1, ReplicationFactor = 1 },
+                new TopicSpecification { Name = "integration-target.dados.invalidos.v1", NumPartitions = 1, ReplicationFactor = 1 }
             });
         }
         catch (CreateTopicsException e)
@@ -59,10 +59,10 @@ public class SupplierAStateMachineTests : IAsyncLifetime
     public async Task Deve_Processar_Validar_E_Finalizar_Com_Sucesso()
     {
         //Arrange
-        var topicInput = "source.fornecedor-a.v1";
-        var topicSuccess = "target.dados.processados.v1";
-        var topicError = "target.dados.invalidos.v1";
-        var consumerGroup = "saga-orchestrator-test-group";
+        var topicInput = "integration-source.fornecedor-a.v1";
+        var topicSuccess = "integration-target.dados.processados.v1";
+        var topicError = "integration-target.dados.invalidos.v1";
+        var consumerGroup = "integration-saga-orchestrator-test-group";
 
         await using var provider = new ServiceCollection()
             .AddLogging(l => l.AddConsole()) // Ajuda a debugar
