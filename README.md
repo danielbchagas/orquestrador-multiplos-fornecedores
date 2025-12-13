@@ -36,6 +36,7 @@ A estrutura de diretórios do projeto está organizada da seguinte forma:
 - **Moq**: Criação de objetos simulados (mocks)
 - **AutoFixture**: Geração de dados de teste anônimos
 - **MassTransit.TestHarness**: Testes de sagas e consumidores MassTransit em memória
+- **NBomber**: Testes de carga e performance
 
 ---
 
