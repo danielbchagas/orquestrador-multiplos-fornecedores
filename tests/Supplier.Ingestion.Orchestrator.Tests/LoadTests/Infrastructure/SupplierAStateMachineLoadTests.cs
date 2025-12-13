@@ -6,6 +6,8 @@ using MassTransit;
 using MassTransit.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NBomber.CSharp;
+using NBomber.Contracts;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
 using System.Diagnostics;
@@ -19,9 +21,11 @@ public class SupplierAStateMachineLoadTests : IAsyncLifetime
     private readonly IFixture _fixture = new Fixture();
     private readonly ITestOutputHelper _output;
 
-    private const int MESSAGE_COUNT = 5000; // Quantidade de sagas para testar
-    private const int CONCURRENCY_LIMIT = 50; // Quantas sagas processam em paralelo
-    private const int MAX_WAIT_SECONDS = 60; // Timeout de segurança
+    private const int CONCURRENCY_LIMIT = 50;
+    private const string SCENARIO_NAME = "ingestao_kafka";
+
+    private const int LOAD_RATE = 20;
+    private const int LOAD_DURATION_SECONDS = 10;
 
     private readonly KafkaContainer _kafkaContainer = new KafkaBuilder()
         .WithImage("confluentinc/cp-kafka:7.5.0")
@@ -36,7 +40,6 @@ public class SupplierAStateMachineLoadTests : IAsyncLifetime
     {
         await _kafkaContainer.StartAsync();
 
-        // Setup inicial dos tópicos (igual ao seu teste original)
         var config = new AdminClientConfig { BootstrapServers = _kafkaContainer.GetBootstrapAddress() };
         using var adminClient = new AdminClientBuilder(config).Build();
 
@@ -44,9 +47,9 @@ public class SupplierAStateMachineLoadTests : IAsyncLifetime
         {
             await adminClient.CreateTopicsAsync(new[]
             {
-                new TopicSpecification { Name = "source.fornecedor-a.v1", NumPartitions = 4, ReplicationFactor = 1 }, // Mais partições para performance
-                new TopicSpecification { Name = "target.dados.processados.v1", NumPartitions = 1, ReplicationFactor = 1 },
-                new TopicSpecification { Name = "target.dados.invalidos.v1", NumPartitions = 1, ReplicationFactor = 1 }
+                new TopicSpecification { Name = "load-source.fornecedor-a.v1", NumPartitions = 4, ReplicationFactor = 1 },
+                new TopicSpecification { Name = "load-target.dados.processados.v1", NumPartitions = 1, ReplicationFactor = 1 },
+                new TopicSpecification { Name = "load-target.dados.invalidos.v1", NumPartitions = 1, ReplicationFactor = 1 }
             });
         }
         catch (CreateTopicsException e)
@@ -58,14 +61,13 @@ public class SupplierAStateMachineLoadTests : IAsyncLifetime
     public async Task DisposeAsync() => await _kafkaContainer.DisposeAsync();
 
     [Fact]
-    public async Task Deve_Suportar_Alta_Carga_De_Processamento()
+    public async Task Deve_Suportar_Alta_Carga()
     {
         // Arrange
-        var topicInput = "source.fornecedor-a.v1";
-        var consumerGroup = "saga-orchestrator-load-group";
+        var topicInput = "load-source.fornecedor-a.v1";
 
         await using var provider = new ServiceCollection()
-            .AddLogging(l => l.SetMinimumLevel(LogLevel.Warning))
+            .AddLogging(l => l.SetMinimumLevel(LogLevel.Error))
             .AddMassTransitTestHarness(x =>
             {
                 x.AddSagaStateMachine<SupplierAStateMachine, SupplierState>()
@@ -73,24 +75,23 @@ public class SupplierAStateMachineLoadTests : IAsyncLifetime
 
                 x.AddRider(rider =>
                 {
-                    rider.AddProducer<string, UnifiedInfringementProcessed>("target.dados.processados.v1");
-                    rider.AddProducer<string, InfringementValidationFailed>("target.dados.invalidos.v1");
+                    rider.AddProducer<string, UnifiedInfringementProcessed>("load-target.dados.processados.v1");
+                    rider.AddProducer<string, InfringementValidationFailed>("load-target.dados.invalidos.v1");
+
                     rider.AddProducer<string, SupplierAInputReceived>(topicInput);
 
                     rider.UsingKafka((context, k) =>
                     {
                         k.Host(_kafkaContainer.GetBootstrapAddress());
 
-                        k.TopicEndpoint<SupplierAInputReceived>(topicInput, consumerGroup, e =>
+                        k.TopicEndpoint<SupplierAInputReceived>(topicInput, "load-nbomber-group", e =>
                         {
                             e.ConcurrentMessageLimit = CONCURRENCY_LIMIT;
                             e.PrefetchCount = CONCURRENCY_LIMIT * 2;
                             e.AutoOffsetReset = AutoOffsetReset.Earliest;
 
-                            var stateMachine = context.GetRequiredService<SupplierAStateMachine>();
-                            var repository = context.GetRequiredService<ISagaRepository<SupplierState>>();
-
-                            e.StateMachineSaga(stateMachine, repository);
+                            e.StateMachineSaga(context.GetRequiredService<SupplierAStateMachine>(),
+                                               context.GetRequiredService<ISagaRepository<SupplierState>>());
                         });
                     });
                 });
@@ -100,43 +101,73 @@ public class SupplierAStateMachineLoadTests : IAsyncLifetime
         var harness = provider.GetRequiredService<ITestHarness>();
         await harness.Start();
 
+        var scenario = Scenario.Create(SCENARIO_NAME, async context =>
+        {
+            var msg = _fixture.Build<SupplierAInputReceived>()
+                .With(x => x.TotalValue, 150.00m)
+                .Create();
+
+            try
+            {
+                await harness.Bus.Publish(msg, context.ScenarioCancellationToken);
+
+                return NBomber.CSharp.Response.Ok();
+            }
+            catch (Exception ex)
+            {
+                return NBomber.CSharp.Response.Fail();
+            }
+        })
+        .WithoutWarmUp()
+        .WithLoadSimulations(
+            Simulation.Inject(rate: LOAD_RATE,
+                              interval: TimeSpan.FromSeconds(1),
+                              during: TimeSpan.FromSeconds(LOAD_DURATION_SECONDS))
+        );
+
+        _output.WriteLine("=== Iniciando NBomber (Simulação de Carga) ===");
+
+        var stats = NBomberRunner
+            .RegisterScenarios(scenario)
+            .Run();
+
+        var scenarioStats = stats.ScenarioStats.Get(SCENARIO_NAME);
+
+        var totalEnviado = scenarioStats.AllOkCount;
+
         var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, SupplierState>();
 
-        var inputMessages = _fixture.Build<SupplierAInputReceived>()
-            .With(x => x.TotalValue, 150.00m)
-            .CreateMany(MESSAGE_COUNT)
-            .ToList();
-
-        _output.WriteLine($"Iniciando carga de {MESSAGE_COUNT} mensagens...");
+        _output.WriteLine($"[NBomber] Mensagens enviadas com sucesso: {totalEnviado}");
+        _output.WriteLine($"[NBomber] Falhas no envio: {scenarioStats.AllFailCount}");
+        _output.WriteLine("[MassTransit] Aguardando consumer drenar a fila...");
 
         var stopwatch = Stopwatch.StartNew();
 
-        // Act
-        await Parallel.ForEachAsync(inputMessages, new ParallelOptions { MaxDegreeOfParallelism = 10 }, async (msg, ct) =>
+        while (sagaHarness.Sagas.Count() < totalEnviado)
         {
-            await harness.Bus.Publish(msg, ct);
-        });
-
-        while (sagaHarness.Sagas.Count() < MESSAGE_COUNT)
-        {
-            if (stopwatch.Elapsed.TotalSeconds > MAX_WAIT_SECONDS)
+            if (stopwatch.Elapsed.TotalSeconds > 60)
+            {
+                _output.WriteLine("TIMEOUT: Consumer não conseguiu processar tudo a tempo.");
                 break;
-
-            await Task.Delay(100);
+            }
+            await Task.Delay(500);
         }
-
         stopwatch.Stop();
 
-        // Assert & Metrics
-        var processedCount = sagaHarness.Sagas.Count();
-        var throughput = processedCount / stopwatch.Elapsed.TotalSeconds;
+        var processados = sagaHarness.Sagas.Count();
+        var throughput = processados / stopwatch.Elapsed.TotalSeconds;
 
         _output.WriteLine($"---------------------------------------------------");
-        _output.WriteLine($"Tempo Total: {stopwatch.Elapsed.TotalSeconds:F2}s");
-        _output.WriteLine($"Processados: {processedCount}/{MESSAGE_COUNT}");
-        _output.WriteLine($"Throughput:  {throughput:F2} sagas/segundo");
+        _output.WriteLine($"Tempo de Drenagem: {stopwatch.Elapsed.TotalSeconds:F2}s");
+        _output.WriteLine($"Sagas Processadas: {processados}/{totalEnviado}");
+        _output.WriteLine($"Throughput Final:  {throughput:F2} sagas/segundo");
         _output.WriteLine($"---------------------------------------------------");
 
-        processedCount.Should().Be(MESSAGE_COUNT);
+        // Asserts
+        Assert.True(scenarioStats.AllFailCount == 0, "Houve erros no envio (Producer) para o Kafka.");
+        Assert.True(totalEnviado > 0, "Nenhuma mensagem foi enviada pelo NBomber.");
+
+        processados.Should().Be(totalEnviado,
+            "A quantidade processada pelo Consumer deve ser igual à enviada pelo NBomber.");
     }
 }
