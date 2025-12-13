@@ -16,7 +16,7 @@ using Xunit.Abstractions;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.LoadTests.Infrastructure;
 
-public class SupplierAStateMachineLoadTests : IAsyncLifetime
+public class SupplierBStateMachineTests : IAsyncLifetime
 {
     private readonly IFixture _fixture = new Fixture();
     private readonly ITestOutputHelper _output;
@@ -31,7 +31,7 @@ public class SupplierAStateMachineLoadTests : IAsyncLifetime
         .WithImage("confluentinc/cp-kafka:7.5.0")
         .Build();
 
-    public SupplierAStateMachineLoadTests(ITestOutputHelper output)
+    public SupplierBStateMachineTests(ITestOutputHelper output)
     {
         _output = output;
     }
@@ -47,7 +47,7 @@ public class SupplierAStateMachineLoadTests : IAsyncLifetime
         {
             await adminClient.CreateTopicsAsync(new[]
             {
-                new TopicSpecification { Name = "load-source.fornecedor-a.v1", NumPartitions = 4, ReplicationFactor = 1 },
+                new TopicSpecification { Name = "load-source.fornecedor-b.v1", NumPartitions = 4, ReplicationFactor = 1 },
                 new TopicSpecification { Name = "load-target.dados.processados.v1", NumPartitions = 1, ReplicationFactor = 1 },
                 new TopicSpecification { Name = "load-target.dados.invalidos.v1", NumPartitions = 1, ReplicationFactor = 1 }
             });
@@ -61,16 +61,16 @@ public class SupplierAStateMachineLoadTests : IAsyncLifetime
     public async Task DisposeAsync() => await _kafkaContainer.DisposeAsync();
 
     [Fact]
-    public async Task Deve_Suportar_Alta_Carga()
+    public async Task Should_Support_High_Load()
     {
         // Arrange
-        var topicInput = "load-source.fornecedor-a.v1";
+        var topicInput = "load-source.fornecedor-b.v1";
 
         await using var provider = new ServiceCollection()
             .AddLogging(l => l.SetMinimumLevel(LogLevel.Error))
             .AddMassTransitTestHarness(x =>
             {
-                x.AddSagaStateMachine<SupplierAStateMachine, SupplierState>()
+                x.AddSagaStateMachine<SupplierBStateMachine, SupplierState>()
                  .InMemoryRepository();
 
                 x.AddRider(rider =>
@@ -78,19 +78,19 @@ public class SupplierAStateMachineLoadTests : IAsyncLifetime
                     rider.AddProducer<string, UnifiedInfringementProcessed>("load-target.dados.processados.v1");
                     rider.AddProducer<string, InfringementValidationFailed>("load-target.dados.invalidos.v1");
 
-                    rider.AddProducer<string, SupplierAInputReceived>(topicInput);
+                    rider.AddProducer<string, SupplierBInputReceived>(topicInput);
 
                     rider.UsingKafka((context, k) =>
                     {
                         k.Host(_kafkaContainer.GetBootstrapAddress());
 
-                        k.TopicEndpoint<SupplierAInputReceived>(topicInput, "load-nbomber-group", e =>
+                        k.TopicEndpoint<SupplierBInputReceived>(topicInput, "load-nbomber-group", e =>
                         {
                             e.ConcurrentMessageLimit = CONCURRENCY_LIMIT;
                             e.PrefetchCount = CONCURRENCY_LIMIT * 2;
                             e.AutoOffsetReset = AutoOffsetReset.Earliest;
 
-                            e.StateMachineSaga(context.GetRequiredService<SupplierAStateMachine>(),
+                            e.StateMachineSaga(context.GetRequiredService<SupplierBStateMachine>(),
                                                context.GetRequiredService<ISagaRepository<SupplierState>>());
                         });
                     });
@@ -103,7 +103,7 @@ public class SupplierAStateMachineLoadTests : IAsyncLifetime
 
         var scenario = Scenario.Create(SCENARIO_NAME, async context =>
         {
-            var msg = _fixture.Build<SupplierAInputReceived>()
+            var msg = _fixture.Build<SupplierBInputReceived>()
                 .With(x => x.TotalValue, 150.00m)
                 .Create();
 
@@ -135,7 +135,7 @@ public class SupplierAStateMachineLoadTests : IAsyncLifetime
 
         var totalEnviado = scenarioStats.AllOkCount;
 
-        var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, SupplierState>();
+        var sagaHarness = harness.GetSagaStateMachineHarness<SupplierBStateMachine, SupplierState>();
 
         _output.WriteLine($"[NBomber] Mensagens enviadas com sucesso: {totalEnviado}");
         _output.WriteLine($"[NBomber] Falhas no envio: {scenarioStats.AllFailCount}");

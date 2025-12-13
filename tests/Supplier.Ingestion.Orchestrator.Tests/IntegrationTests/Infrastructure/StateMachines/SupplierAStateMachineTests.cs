@@ -10,24 +10,20 @@ using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
 using Testcontainers.Kafka;
 
-namespace Supplier.Ingestion.Orchestrator.Tests.Integration;
+namespace Supplier.Ingestion.Orchestrator.Tests.IntegrationTests.Infrastructure.StateMachines;
 
 public class SupplierAStateMachineTests : IAsyncLifetime
 {
     private readonly IFixture _fixture = new Fixture();
 
-    // Configura o Container do Kafka (Versão compatível com Confluent)
     private readonly KafkaContainer _kafkaContainer = new KafkaBuilder()
         .WithImage("confluentinc/cp-kafka:7.5.0")
         .Build();
 
     public async Task InitializeAsync()
     {
-        // 1. Inicia o Container
         await _kafkaContainer.StartAsync();
 
-        // 2. Cria os tópicos explicitamente antes do MassTransit rodar
-        // Isso evita o erro "Unknown topic or partition"
         var config = new AdminClientConfig
         {
             BootstrapServers = _kafkaContainer.GetBootstrapAddress()
@@ -46,7 +42,6 @@ public class SupplierAStateMachineTests : IAsyncLifetime
         }
         catch (CreateTopicsException e)
         {
-            // Ignora se já existir (embora no Testcontainers seja sempre novo)
             if (e.Results.Any(r => r.Error.Code != ErrorCode.TopicAlreadyExists))
             {
                 throw;
@@ -56,7 +51,7 @@ public class SupplierAStateMachineTests : IAsyncLifetime
     public async Task DisposeAsync() => await _kafkaContainer.DisposeAsync();
 
     [Fact]
-    public async Task Deve_Processar_Validar_E_Finalizar_Com_Sucesso()
+    public async Task Should_Process_Validate_And_Complete_Successfully()
     {
         //Arrange
         var topicInput = "integration-source.fornecedor-a.v1";
@@ -65,7 +60,7 @@ public class SupplierAStateMachineTests : IAsyncLifetime
         var consumerGroup = "integration-saga-orchestrator-test-group";
 
         await using var provider = new ServiceCollection()
-            .AddLogging(l => l.AddConsole()) // Ajuda a debugar
+            .AddLogging(l => l.AddConsole())
             .AddMassTransitTestHarness(x =>
             {
                 x.AddSagaStateMachine<SupplierAStateMachine, SupplierState>()
@@ -100,7 +95,7 @@ public class SupplierAStateMachineTests : IAsyncLifetime
         await harness.Start();
 
         var inputMessage = _fixture.Build<SupplierAInputReceived>()
-            .With(x => x.TotalValue, 150.00m) // Valor válido
+            .With(x => x.TotalValue, 150.00m)
             .Create();
 
         // Act
