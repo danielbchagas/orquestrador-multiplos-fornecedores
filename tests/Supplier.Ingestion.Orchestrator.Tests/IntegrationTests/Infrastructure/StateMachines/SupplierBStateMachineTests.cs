@@ -10,9 +10,9 @@ using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
 using Testcontainers.Kafka;
 
-namespace Supplier.Ingestion.Orchestrator.Tests.Integration;
+namespace Supplier.Ingestion.Orchestrator.Tests.IntegrationTests.Infrastructure.StateMachines;
 
-public class SupplierAStateMachineTests : IAsyncLifetime
+public class SupplierBStateMachineTests : IAsyncLifetime
 {
     private readonly IFixture _fixture = new Fixture();
 
@@ -39,7 +39,7 @@ public class SupplierAStateMachineTests : IAsyncLifetime
         {
             await adminClient.CreateTopicsAsync(new[]
             {
-                new TopicSpecification { Name = "source.fornecedor-a.v1", NumPartitions = 1, ReplicationFactor = 1 },
+                new TopicSpecification { Name = "source.fornecedor-b.v1", NumPartitions = 1, ReplicationFactor = 1 },
                 new TopicSpecification { Name = "target.dados.processados.v1", NumPartitions = 1, ReplicationFactor = 1 },
                 new TopicSpecification { Name = "target.dados.invalidos.v1", NumPartitions = 1, ReplicationFactor = 1 }
             });
@@ -59,7 +59,7 @@ public class SupplierAStateMachineTests : IAsyncLifetime
     public async Task Deve_Processar_Validar_E_Finalizar_Com_Sucesso()
     {
         //Arrange
-        var topicInput = "source.fornecedor-a.v1";
+        var topicInput = "source.fornecedor-b.v1";
         var topicSuccess = "target.dados.processados.v1";
         var topicError = "target.dados.invalidos.v1";
         var consumerGroup = "saga-orchestrator-test-group";
@@ -68,7 +68,7 @@ public class SupplierAStateMachineTests : IAsyncLifetime
             .AddLogging(l => l.AddConsole()) // Ajuda a debugar
             .AddMassTransitTestHarness(x =>
             {
-                x.AddSagaStateMachine<SupplierAStateMachine, SupplierState>()
+                x.AddSagaStateMachine<SupplierBStateMachine, SupplierState>()
                  .InMemoryRepository();
 
                 x.AddRider(rider =>
@@ -76,15 +76,15 @@ public class SupplierAStateMachineTests : IAsyncLifetime
                     rider.AddProducer<string, UnifiedInfringementProcessed>(topicSuccess);
                     rider.AddProducer<string, InfringementValidationFailed>(topicError);
 
-                    rider.AddProducer<string, SupplierAInputReceived>(topicInput);
+                    rider.AddProducer<string, SupplierBInputReceived>(topicInput);
 
                     rider.UsingKafka((context, k) =>
                     {
                         k.Host(_kafkaContainer.GetBootstrapAddress());
 
-                        k.TopicEndpoint<SupplierAInputReceived>(topicInput, consumerGroup, e =>
+                        k.TopicEndpoint<SupplierBInputReceived>(topicInput, consumerGroup, e =>
                         {
-                            var stateMachine = context.GetRequiredService<SupplierAStateMachine>();
+                            var stateMachine = context.GetRequiredService<SupplierBStateMachine>();
                             var repository = context.GetRequiredService<ISagaRepository<SupplierState>>();
 
                             e.StateMachineSaga(stateMachine, repository);
@@ -99,19 +99,19 @@ public class SupplierAStateMachineTests : IAsyncLifetime
         var harness = provider.GetRequiredService<ITestHarness>();
         await harness.Start();
 
-        var inputMessage = _fixture.Build<SupplierAInputReceived>()
+        var inputMessage = _fixture.Build<SupplierBInputReceived>()
             .With(x => x.TotalValue, 150.00m) // Valor válido
             .Create();
 
         // Act
         await harness.Bus.Publish(inputMessage);
 
-        var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, SupplierState>();
+        var sagaHarness = harness.GetSagaStateMachineHarness<SupplierBStateMachine, SupplierState>();
         var message = sagaHarness.Sagas.Contains(inputMessage.CorrelationId);
 
         // Assert
-        Assert.True(await sagaHarness.Consumed.Any<SupplierAInputReceived>());
-        
+        Assert.True(await sagaHarness.Consumed.Any<SupplierBInputReceived>());
+
         message.Should().NotBeNull("A saga deve existir com o CorrelationId fornecido.");
         message.CorrelationId.Should().Be(inputMessage.CorrelationId, "O CorrelationId da saga deve corresponder ao do evento publicado.");
         message.ExternalId.Should().Be(inputMessage.ExternalCode, "O ExternalCode deve ser copiado corretamente do evento para o estado da saga.");
