@@ -15,7 +15,6 @@ A estrutura de diretórios do projeto está organizada da seguinte forma:
     - `Controllers/`: Endpoints da API.
     - `Domain/`: Entidades e regras de negócio.
     - `Infrastructure/`: Implementação de acesso a dados e serviços externos.
-    - `Shared/`: Recursos compartilhados.
 - **tests/**: Contém os testes automatizados do projeto.
 - **docs/**: Documentação complementar e diagramas de arquitetura.
 - **docker-compose.yml**: Arquivo para orquestração de containers Docker, facilitando a execução do ambiente local.
@@ -68,7 +67,7 @@ dotnet run --project src/Supplier.Ingestion.Orchestrator.Api
   "OriginSystem": "Fornecedor_A"
 }
 ```
-Destino: `target.dados.processados.v1`
+Destino: `target.processed.data.v1`
 
 **Evento inválido**
 ```
@@ -80,7 +79,7 @@ Destino: `target.dados.processados.v1`
   "OriginSystem": "Fornecedor_A"
 }
 ```
-Destino: `target.dados.invalidos.v1`
+Destino: `target.invalid.data.v1`
 
 ---
 
@@ -96,7 +95,7 @@ Destino: `target.dados.invalidos.v1`
   "OriginSystem": "Fornecedor_B"
 }
 ```
-Destino: `target.dados.processados.v1`
+Destino: `target.processed.data.v1`
 
 **Evento inválido**
 ```
@@ -108,4 +107,4 @@ Destino: `target.dados.processados.v1`
   "OriginSystem": "Fornecedor_B"
 }
 ```
-Destino: `target.dados.invalidos.v1`
+Destino: `target.invalid.data.v1`

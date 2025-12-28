@@ -1,4 +1,6 @@
-﻿using MassTransit;
+﻿#define PERSISTENT_SAGA
+
+using MassTransit;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 using Supplier.Ingestion.Orchestrator.Api.Validators;
 
@@ -7,6 +9,11 @@ namespace Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
 public class SupplierBStateMachine : MassTransitStateMachine<SupplierState>
 {
     public Event<SupplierBInputReceived> InputReceived { get; private set; }
+
+#if PERSISTENT_SAGA
+    public State Processed { get; private set; }
+    public State Invalid { get; private set; }
+#endif
 
     public SupplierBStateMachine(ILogger<SupplierBStateMachine> logger)
     {
@@ -22,16 +29,14 @@ public class SupplierBStateMachine : MassTransitStateMachine<SupplierState>
             When(InputReceived)
                 .Then(ctx =>
                 {
-                    logger.LogInformation("Saga B Iniciada. ExternalCode: {ExternalCode}", ctx.Message.ExternalCode);
+                    logger.LogInformation("Saga B started. ExternalCode: {ExternalCode}", ctx.Message.ExternalCode);
 
                     ctx.Saga.CorrelationId = ctx.Message.CorrelationId;
                     ctx.Saga.ExternalId = ctx.Message.ExternalCode;
                     ctx.Saga.Plate = ctx.Message.Plate;
                     ctx.Saga.Amount = ctx.Message.TotalValue;
                     ctx.Saga.OriginSystem = ctx.Message.OriginSystem;
-
                     ctx.Saga.InfringementCode = ctx.Message.Infringement;
-
                     ctx.Saga.CreatedAt = DateTime.UtcNow;
 
                     var (isValid, error) = InfringementValidator.Validate(
@@ -43,7 +48,7 @@ public class SupplierBStateMachine : MassTransitStateMachine<SupplierState>
                     ctx.Saga.IsValid = isValid;
                     ctx.Saga.ValidationErrors = error;
 
-                    logger.LogInformation("Validação concluída. IsValid: {IsValid}", ctx.Saga.IsValid);
+                    logger.LogInformation("Validation completed. IsValid: {IsValid}", ctx.Saga.IsValid);
                 })
                 .IfElse(
                     ctx => ctx.Saga.IsValid,
@@ -65,9 +70,13 @@ public class SupplierBStateMachine : MassTransitStateMachine<SupplierState>
                             ctx.CancellationToken
                         );
 
-                        logger.LogInformation("Mensagem enviada para o Kafka (Sucesso)!");
+                        logger.LogInformation("Message sent to Kafka (Success)!");
                     })
+#if PERSISTENT_SAGA
+                    .TransitionTo(Processed),
+#else
                     .Finalize(),
+#endif
 
                     binder => binder.ThenAsync(async ctx =>
                     {
@@ -84,10 +93,14 @@ public class SupplierBStateMachine : MassTransitStateMachine<SupplierState>
                             ctx.CancellationToken
                         );
 
-                        logger.LogWarning("Mensagem enviada para o Kafka (DLQ)!");
+                        logger.LogWarning("Message sent to Kafka (DLQ)!");
                     })
+#if PERSISTENT_SAGA
+                    .TransitionTo(Invalid)
+#else
                     .Finalize()
-            )
+#endif
+                )
         );
 
         SetCompletedWhenFinalized();

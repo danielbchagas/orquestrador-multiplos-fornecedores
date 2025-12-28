@@ -35,9 +35,9 @@ public class SupplierBStateMachineTests : IAsyncLifetime
         {
             await adminClient.CreateTopicsAsync(new[]
             {
-                new TopicSpecification { Name = "integration-source.fornecedor-b.v1", NumPartitions = 1, ReplicationFactor = 1 },
-                new TopicSpecification { Name = "integration-target.dados.processados.v1", NumPartitions = 1, ReplicationFactor = 1 },
-                new TopicSpecification { Name = "integration-target.dados.invalidos.v1", NumPartitions = 1, ReplicationFactor = 1 }
+                new TopicSpecification { Name = "integration-source.supplier-b.v1", NumPartitions = 1, ReplicationFactor = 1 },
+                new TopicSpecification { Name = "integration-target.processed.data.v1", NumPartitions = 1, ReplicationFactor = 1 },
+                new TopicSpecification { Name = "integration-target.invalid.data.v1", NumPartitions = 1, ReplicationFactor = 1 }
             });
         }
         catch (CreateTopicsException e)
@@ -54,9 +54,9 @@ public class SupplierBStateMachineTests : IAsyncLifetime
     public async Task Should_Process_Validate_And_Complete_Successfully()
     {
         //Arrange
-        var topicInput = "integration-source.fornecedor-b.v1";
-        var topicSuccess = "integration-target.dados.processados.v1";
-        var topicError = "integration-target.dados.invalidos.v1";
+        var topicInput = "integration-source.supplier-b.v1";
+        var topicSuccess = "integration-target.processed.data.v1";
+        var topicError = "integration-target.invalid.data.v1";
         var consumerGroup = "integration-saga-orchestrator-test-group";
 
         await using var provider = new ServiceCollection()
@@ -107,12 +107,12 @@ public class SupplierBStateMachineTests : IAsyncLifetime
         // Assert
         Assert.True(await sagaHarness.Consumed.Any<SupplierBInputReceived>());
 
-        message.Should().NotBeNull("A saga deve existir com o CorrelationId fornecido.");
-        message.CorrelationId.Should().Be(inputMessage.CorrelationId, "O CorrelationId da saga deve corresponder ao do evento publicado.");
-        message.ExternalId.Should().Be(inputMessage.ExternalCode, "O ExternalCode deve ser copiado corretamente do evento para o estado da saga.");
-        message.Plate.Should().Be(inputMessage.Plate, "A placa deve ser copiada corretamente do evento para o estado da saga.");
-        message.InfringementCode.Should().Be(inputMessage.Infringement, "O código de infração deve ser copiado corretamente do evento para o estado da saga.");
-        message.Amount.Should().Be(inputMessage.TotalValue, "O valor total deve ser copiado corretamente do evento para o estado da saga.");
-        message.OriginSystem.Should().Be(inputMessage.OriginSystem, "O Sistema de origem deve ser copiado corretamente do evento para o estado da saga.");
+        message.Should().NotBeNull("The saga should exist with the provided CorrelationId.");
+        message.CorrelationId.Should().Be(inputMessage.CorrelationId, "The saga CorrelationId should match the published event's CorrelationId.");
+        message.ExternalId.Should().Be(inputMessage.ExternalCode, "The ExternalCode should be correctly copied from the event to the saga state.");
+        message.Plate.Should().Be(inputMessage.Plate, "The plate should be correctly copied from the event to the saga state.");
+        message.InfringementCode.Should().Be(inputMessage.Infringement, "The infringement code should be correctly copied from the event to the saga state.");
+        message.Amount.Should().Be(inputMessage.TotalValue, "The total value should be correctly copied from the event to the saga state.");
+        message.OriginSystem.Should().Be(inputMessage.OriginSystem, "The origin system should be correctly copied from the event to the saga state.");
     }
 }
