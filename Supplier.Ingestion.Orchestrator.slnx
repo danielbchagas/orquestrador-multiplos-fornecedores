@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/docs/">
+    <File Path="Diagram.mmd" />
     <File Path="docs/Diagram.png" />
   </Folder>
   <Folder Name="/files/">
