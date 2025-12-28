@@ -1,4 +1,6 @@
-﻿using MassTransit;
+﻿#define PERSISTENT_SAGA
+
+using MassTransit;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 using Supplier.Ingestion.Orchestrator.Api.Validators;
 
@@ -7,6 +9,11 @@ namespace Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
 public class SupplierAStateMachine : MassTransitStateMachine<SupplierState>
 {
     public Event<SupplierAInputReceived> InputReceived { get; private set; }
+
+#if PERSISTENT_SAGA
+    public State Processed { get; private set; }
+    public State Invalid { get; private set; }
+#endif
 
     public SupplierAStateMachine(ILogger<SupplierAStateMachine> logger)
     {
@@ -65,7 +72,11 @@ public class SupplierAStateMachine : MassTransitStateMachine<SupplierState>
 
                         logger.LogInformation("Message sent to Kafka (Success)!");
                     })
+#if PERSISTENT_SAGA
+                    .TransitionTo(Processed),
+#else
                     .Finalize(),
+#endif
 
                     binder => binder.ThenAsync(async ctx =>
                     {
@@ -84,7 +95,11 @@ public class SupplierAStateMachine : MassTransitStateMachine<SupplierState>
 
                         logger.LogWarning("Message sent to Kafka (DLQ)!");
                     })
+#if PERSISTENT_SAGA
+                    .TransitionTo(Invalid)
+#else
                     .Finalize()
+#endif
                 )
         );
 
