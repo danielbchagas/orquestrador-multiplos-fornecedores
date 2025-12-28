@@ -29,9 +29,7 @@ public class SupplierBStateMachine : MassTransitStateMachine<SupplierState>
                     ctx.Saga.Plate = ctx.Message.Plate;
                     ctx.Saga.Amount = ctx.Message.TotalValue;
                     ctx.Saga.OriginSystem = ctx.Message.OriginSystem;
-
                     ctx.Saga.InfringementCode = ctx.Message.Infringement;
-
                     ctx.Saga.CreatedAt = DateTime.UtcNow;
 
                     var (isValid, error) = InfringementValidator.Validate(
