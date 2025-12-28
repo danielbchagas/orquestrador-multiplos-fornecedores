@@ -47,9 +47,9 @@ public class SupplierBStateMachineTests : IAsyncLifetime
         {
             await adminClient.CreateTopicsAsync(new[]
             {
-                new TopicSpecification { Name = "load-source.fornecedor-b.v1", NumPartitions = 4, ReplicationFactor = 1 },
-                new TopicSpecification { Name = "load-target.dados.processados.v1", NumPartitions = 1, ReplicationFactor = 1 },
-                new TopicSpecification { Name = "load-target.dados.invalidos.v1", NumPartitions = 1, ReplicationFactor = 1 }
+                new TopicSpecification { Name = "load-source.supplier-b.v1", NumPartitions = 4, ReplicationFactor = 1 },
+                new TopicSpecification { Name = "load-target.processed.data.v1", NumPartitions = 1, ReplicationFactor = 1 },
+                new TopicSpecification { Name = "load-target.invalid.data.v1", NumPartitions = 1, ReplicationFactor = 1 }
             });
         }
         catch (CreateTopicsException e)
@@ -64,7 +64,7 @@ public class SupplierBStateMachineTests : IAsyncLifetime
     public async Task Should_Support_High_Load()
     {
         // Arrange
-        var topicInput = "load-source.fornecedor-b.v1";
+        var topicInput = "load-source.supplier-b.v1";
 
         await using var provider = new ServiceCollection()
             .AddLogging(l => l.SetMinimumLevel(LogLevel.Error))
@@ -75,8 +75,8 @@ public class SupplierBStateMachineTests : IAsyncLifetime
 
                 x.AddRider(rider =>
                 {
-                    rider.AddProducer<string, UnifiedInfringementProcessed>("load-target.dados.processados.v1");
-                    rider.AddProducer<string, InfringementValidationFailed>("load-target.dados.invalidos.v1");
+                    rider.AddProducer<string, UnifiedInfringementProcessed>("load-target.processed.data.v1");
+                    rider.AddProducer<string, InfringementValidationFailed>("load-target.invalid.data.v1");
 
                     rider.AddProducer<string, SupplierBInputReceived>(topicInput);
 

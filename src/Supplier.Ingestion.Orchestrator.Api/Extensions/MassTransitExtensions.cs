@@ -37,14 +37,14 @@ public static class MassTransitExtensions
 
             x.AddRider(rider =>
             {
-                rider.AddProducer<string, UnifiedInfringementProcessed>("target.dados.processados.v1");
-                rider.AddProducer<string, InfringementValidationFailed>("target.dados.invalidos.v1");
+                rider.AddProducer<string, UnifiedInfringementProcessed>("target.processed.data.v1");
+                rider.AddProducer<string, InfringementValidationFailed>("target.invalid.data.v1");
 
                 rider.UsingKafka((context, k) =>
                 {
                     k.Host(configuration.GetConnectionString("Kafka"));
 
-                    k.TopicEndpoint<SupplierAInputReceived>("source.fornecedor-a.v1", "saga-group-a", e =>
+                    k.TopicEndpoint<SupplierAInputReceived>("source.supplier-a.v1", "saga-group-a", e =>
                     {
                         e.AutoOffsetReset = Confluent.Kafka.AutoOffsetReset.Earliest;
                         e.ConcurrentMessageLimit = 10;
@@ -55,7 +55,7 @@ public static class MassTransitExtensions
                         e.StateMachineSaga(machine, context);
                     });
 
-                    k.TopicEndpoint<SupplierBInputReceived>("source.fornecedor-b.v1", "saga-group-b", e =>
+                    k.TopicEndpoint<SupplierBInputReceived>("source.supplier-b.v1", "saga-group-b", e =>
                     {
                         e.AutoOffsetReset = Confluent.Kafka.AutoOffsetReset.Earliest;
 

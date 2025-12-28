@@ -35,9 +35,9 @@ public class SupplierBStateMachineTests : IAsyncLifetime
         {
             await adminClient.CreateTopicsAsync(new[]
             {
-                new TopicSpecification { Name = "integration-source.fornecedor-b.v1", NumPartitions = 1, ReplicationFactor = 1 },
-                new TopicSpecification { Name = "integration-target.dados.processados.v1", NumPartitions = 1, ReplicationFactor = 1 },
-                new TopicSpecification { Name = "integration-target.dados.invalidos.v1", NumPartitions = 1, ReplicationFactor = 1 }
+                new TopicSpecification { Name = "integration-source.supplier-b.v1", NumPartitions = 1, ReplicationFactor = 1 },
+                new TopicSpecification { Name = "integration-target.processed.data.v1", NumPartitions = 1, ReplicationFactor = 1 },
+                new TopicSpecification { Name = "integration-target.invalid.data.v1", NumPartitions = 1, ReplicationFactor = 1 }
             });
         }
         catch (CreateTopicsException e)
@@ -54,9 +54,9 @@ public class SupplierBStateMachineTests : IAsyncLifetime
     public async Task Should_Process_Validate_And_Complete_Successfully()
     {
         //Arrange
-        var topicInput = "integration-source.fornecedor-b.v1";
-        var topicSuccess = "integration-target.dados.processados.v1";
-        var topicError = "integration-target.dados.invalidos.v1";
+        var topicInput = "integration-source.supplier-b.v1";
+        var topicSuccess = "integration-target.processed.data.v1";
+        var topicError = "integration-target.invalid.data.v1";
         var consumerGroup = "integration-saga-orchestrator-test-group";
 
         await using var provider = new ServiceCollection()
