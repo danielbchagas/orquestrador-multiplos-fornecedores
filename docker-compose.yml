@@ -22,7 +22,3 @@ services:
       - otel-collector
     networks:
       - saga-net
-
-networks:
-  saga-net:
-    driver: bridge
