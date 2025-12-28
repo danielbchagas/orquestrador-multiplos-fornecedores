@@ -107,12 +107,12 @@ public class SupplierAStateMachineTests : IAsyncLifetime
         // Assert
         Assert.True(await sagaHarness.Consumed.Any<SupplierAInputReceived>());
         
-        message.Should().NotBeNull("A saga deve existir com o CorrelationId fornecido.");
-        message.CorrelationId.Should().Be(inputMessage.CorrelationId, "O CorrelationId da saga deve corresponder ao do evento publicado.");
-        message.ExternalId.Should().Be(inputMessage.ExternalCode, "O ExternalCode deve ser copiado corretamente do evento para o estado da saga.");
-        message.Plate.Should().Be(inputMessage.Plate, "A placa deve ser copiada corretamente do evento para o estado da saga.");
-        message.InfringementCode.Should().Be(inputMessage.Infringement, "O código de infração deve ser copiado corretamente do evento para o estado da saga.");
-        message.Amount.Should().Be(inputMessage.TotalValue, "O valor total deve ser copiado corretamente do evento para o estado da saga.");
-        message.OriginSystem.Should().Be(inputMessage.OriginSystem, "O Sistema de origem deve ser copiado corretamente do evento para o estado da saga.");
+        message.Should().NotBeNull("A saga should exist with the provided CorrelationId.");
+        message.CorrelationId.Should().Be(inputMessage.CorrelationId, "The saga CorrelationId should match the published event's CorrelationId.");
+        message.ExternalId.Should().Be(inputMessage.ExternalCode, "The ExternalCode should be correctly copied from the event to the saga state.");
+        message.Plate.Should().Be(inputMessage.Plate, "The plate should be correctly copied from the event to the saga state.");
+        message.InfringementCode.Should().Be(inputMessage.Infringement, "The infringement code should be correctly copied from the event to the saga state.");
+        message.Amount.Should().Be(inputMessage.TotalValue, "The total value should be correctly copied from the event to the saga state.");
+        message.OriginSystem.Should().Be(inputMessage.OriginSystem, "The origin system should be correctly copied from the event to the saga state.");
     }
 }

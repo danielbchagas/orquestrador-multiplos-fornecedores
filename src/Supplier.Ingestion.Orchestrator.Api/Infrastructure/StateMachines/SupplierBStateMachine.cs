@@ -22,7 +22,7 @@ public class SupplierBStateMachine : MassTransitStateMachine<SupplierState>
             When(InputReceived)
                 .Then(ctx =>
                 {
-                    logger.LogInformation("Saga B Iniciada. ExternalCode: {ExternalCode}", ctx.Message.ExternalCode);
+                    logger.LogInformation("Saga B started. ExternalCode: {ExternalCode}", ctx.Message.ExternalCode);
 
                     ctx.Saga.CorrelationId = ctx.Message.CorrelationId;
                     ctx.Saga.ExternalId = ctx.Message.ExternalCode;
@@ -41,7 +41,7 @@ public class SupplierBStateMachine : MassTransitStateMachine<SupplierState>
                     ctx.Saga.IsValid = isValid;
                     ctx.Saga.ValidationErrors = error;
 
-                    logger.LogInformation("Validação concluída. IsValid: {IsValid}", ctx.Saga.IsValid);
+                    logger.LogInformation("Validation completed. IsValid: {IsValid}", ctx.Saga.IsValid);
                 })
                 .IfElse(
                     ctx => ctx.Saga.IsValid,
@@ -63,7 +63,7 @@ public class SupplierBStateMachine : MassTransitStateMachine<SupplierState>
                             ctx.CancellationToken
                         );
 
-                        logger.LogInformation("Mensagem enviada para o Kafka (Sucesso)!");
+                        logger.LogInformation("Message sent to Kafka (Success)!");
                     })
                     .Finalize(),
 
@@ -82,7 +82,7 @@ public class SupplierBStateMachine : MassTransitStateMachine<SupplierState>
                             ctx.CancellationToken
                         );
 
-                        logger.LogWarning("Mensagem enviada para o Kafka (DLQ)!");
+                        logger.LogWarning("Message sent to Kafka (DLQ)!");
                     })
                     .Finalize()
             )

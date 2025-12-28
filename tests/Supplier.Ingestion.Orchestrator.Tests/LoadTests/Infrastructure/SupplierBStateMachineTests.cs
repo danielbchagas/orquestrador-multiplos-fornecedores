@@ -125,7 +125,7 @@ public class SupplierBStateMachineTests : IAsyncLifetime
                               during: TimeSpan.FromSeconds(LOAD_DURATION_SECONDS))
         );
 
-        _output.WriteLine("=== Iniciando NBomber (Simulação de Carga) ===");
+        _output.WriteLine("=== Starting NBomber (Load Simulation) ===");
 
         var stats = NBomberRunner
             .RegisterScenarios(scenario)
@@ -133,41 +133,41 @@ public class SupplierBStateMachineTests : IAsyncLifetime
 
         var scenarioStats = stats.ScenarioStats.Get(SCENARIO_NAME);
 
-        var totalEnviado = scenarioStats.AllOkCount;
+        var totalSent = scenarioStats.AllOkCount;
 
         var sagaHarness = harness.GetSagaStateMachineHarness<SupplierBStateMachine, SupplierState>();
 
-        _output.WriteLine($"[NBomber] Mensagens enviadas com sucesso: {totalEnviado}");
-        _output.WriteLine($"[NBomber] Falhas no envio: {scenarioStats.AllFailCount}");
-        _output.WriteLine("[MassTransit] Aguardando consumer drenar a fila...");
+        _output.WriteLine($"[NBomber] Messages sent successfully: {totalSent}");
+        _output.WriteLine($"[NBomber] Send failures: {scenarioStats.AllFailCount}");
+        _output.WriteLine("[MassTransit] Waiting for consumer to drain the queue...");
 
         var stopwatch = Stopwatch.StartNew();
 
-        while (sagaHarness.Sagas.Count() < totalEnviado)
+        while (sagaHarness.Sagas.Count() < totalSent)
         {
             if (stopwatch.Elapsed.TotalSeconds > 60)
             {
-                _output.WriteLine("TIMEOUT: Consumer não conseguiu processar tudo a tempo.");
+                _output.WriteLine("TIMEOUT: Consumer could not process everything in time.");
                 break;
             }
             await Task.Delay(500);
         }
         stopwatch.Stop();
 
-        var processados = sagaHarness.Sagas.Count();
-        var throughput = processados / stopwatch.Elapsed.TotalSeconds;
+        var processed = sagaHarness.Sagas.Count();
+        var throughput = processed / stopwatch.Elapsed.TotalSeconds;
 
         _output.WriteLine($"---------------------------------------------------");
-        _output.WriteLine($"Tempo de Drenagem: {stopwatch.Elapsed.TotalSeconds:F2}s");
-        _output.WriteLine($"Sagas Processadas: {processados}/{totalEnviado}");
-        _output.WriteLine($"Throughput Final:  {throughput:F2} sagas/segundo");
+        _output.WriteLine($"Drain Time: {stopwatch.Elapsed.TotalSeconds:F2}s");
+        _output.WriteLine($"Sagas Processed: {processed}/{totalSent}");
+        _output.WriteLine($"Final Throughput:  {throughput:F2} sagas/second");
         _output.WriteLine($"---------------------------------------------------");
 
         // Asserts
-        Assert.True(scenarioStats.AllFailCount == 0, "Houve erros no envio (Producer) para o Kafka.");
-        Assert.True(totalEnviado > 0, "Nenhuma mensagem foi enviada pelo NBomber.");
+        Assert.True(scenarioStats.AllFailCount == 0, "There were errors sending (Producer) to Kafka.");
+        Assert.True(totalSent > 0, "No message was sent by NBomber.");
 
-        processados.Should().Be(totalEnviado,
-            "A quantidade processada pelo Consumer deve ser igual à enviada pelo NBomber.");
+        processed.Should().Be(totalSent,
+            "The amount processed by the Consumer must be equal to that sent by NBomber.");
     }
 }
