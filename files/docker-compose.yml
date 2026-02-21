@@ -73,6 +73,7 @@ services:
 
   init-kafka:
     image: confluentinc/cp-kafka:7.5.0
+    restart: "no"
     depends_on:
       - kafka
     networks:
@@ -134,6 +135,7 @@ services:
       - GF_AUTH_DISABLE_LOGIN_FORM=true
     depends_on:
       - loki
+      - prometheus
     volumes:
       - ./datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
     networks:
