@@ -12,6 +12,7 @@ using Testcontainers.Kafka;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.IntegrationTests.Infrastructure.StateMachines;
 
+[Collection("SequentialIntegrationTests")]
 public class SupplierBStateMachineTests : IAsyncLifetime
 {
     private readonly IFixture _fixture = new Fixture();
