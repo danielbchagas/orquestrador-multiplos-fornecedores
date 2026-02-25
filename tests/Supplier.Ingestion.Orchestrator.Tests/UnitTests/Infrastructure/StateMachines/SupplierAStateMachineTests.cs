@@ -1,129 +1,20 @@
-﻿using AutoFixture;
-using MassTransit;
-using MassTransit.Testing;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Moq;
+using AutoFixture;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.UnitTests.Infrastructure.StateMachines;
 
-public class SupplierAStateMachineTests
+public class SupplierAStateMachineTests : SupplierStateMachineTestsBase<SupplierAStateMachine, SupplierAInputReceived>
 {
-    private readonly IFixture _fixture = new Fixture();
-    private readonly Mock<ITopicProducer<string, UnifiedInfringementProcessed>> _unifiedProducerMock;
-    private readonly Mock<ITopicProducer<string, InfringementValidationFailed>> _failedProducerMock;
-
-    public SupplierAStateMachineTests()
-    {
-        _unifiedProducerMock = new Mock<ITopicProducer<string, UnifiedInfringementProcessed>>();
-        _failedProducerMock = new Mock<ITopicProducer<string, InfringementValidationFailed>>();
-    }
-
-    [Fact]
-    public async Task GivenValidInput_WhenInputReceivedEventIsConsumed_ThenShouldPublishUnifiedInfringementProcessedAndFinalize()
-    {
-        // Arrange
-        await using var provider = new ServiceCollection()
-            .AddSingleton(Mock.Of<ILogger<SupplierAStateMachine>>())
-            .AddSingleton(_unifiedProducerMock.Object)
-            .AddSingleton(_failedProducerMock.Object)
-            .AddMassTransitTestHarness(cfg =>
-            {
-                cfg.AddSagaStateMachine<SupplierAStateMachine, SupplierState>();
-            })
-            .BuildServiceProvider(true);
-
-        var harness = provider.GetRequiredService<ITestHarness>();
-        await harness.Start();
-
-        var machine = provider.GetRequiredService<SupplierAStateMachine>();
-        var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, SupplierState>();
-
-        var correlationId = Guid.NewGuid();
-        var inputEvent = _fixture.Build<SupplierAInputReceived>()
+    protected override SupplierAInputReceived BuildValidInputEvent(Guid correlationId) =>
+        Fixture.Build<SupplierAInputReceived>()
             .With(x => x.CorrelationId, correlationId)
-            .With(x => x.TotalValue, 100) // Ensure amount is valid
+            .With(x => x.TotalValue, 100m)
             .Create();
 
-        // Act
-        await harness.Bus.Publish(inputEvent);
-
-        // Assert
-        Assert.True(await sagaHarness.Consumed.Any<SupplierAInputReceived>(x => x.Context.Message.CorrelationId == correlationId));
-        Assert.NotEqual(await sagaHarness.Exists(correlationId, x => x.Final), Guid.Empty);
-
-        _unifiedProducerMock.Verify(p => p.Produce(
-                It.IsAny<string>(),
-                It.IsAny<UnifiedInfringementProcessed>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-
-        _failedProducerMock.Verify(p => p.Produce(
-                It.IsAny<string>(),
-                It.IsAny<InfringementValidationFailed>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    [Fact]
-    public async Task GivenInvalidInput_WhenInputReceivedEventIsConsumed_ThenShouldPublishInfringementValidationFailedAndFinalize()
-    {
-        // Arrange
-        await using var provider = new ServiceCollection()
-            .AddSingleton(Mock.Of<ILogger<SupplierAStateMachine>>())
-            .AddSingleton(_unifiedProducerMock.Object)
-            .AddSingleton(_failedProducerMock.Object)
-            .AddMassTransitTestHarness(cfg =>
-            {
-                cfg.AddSagaStateMachine<SupplierAStateMachine, SupplierState>();
-            })
-            .BuildServiceProvider(true);
-
-        var harness = provider.GetRequiredService<ITestHarness>();
-        await harness.Start();
-
-        var machine = provider.GetRequiredService<SupplierAStateMachine>();
-        var sagaHarness = harness.GetSagaStateMachineHarness<SupplierAStateMachine, SupplierState>();
-
-        var correlationId = Guid.NewGuid();
-        var inputEvent = _fixture.Build<SupplierAInputReceived>()
+    protected override SupplierAInputReceived BuildInvalidInputEvent(Guid correlationId) =>
+        Fixture.Build<SupplierAInputReceived>()
             .With(x => x.CorrelationId, correlationId)
-            .With(x => x.TotalValue, -1)
+            .With(x => x.TotalValue, -1m)
             .Create();
-
-        _unifiedProducerMock
-            .Setup(p => p.Produce(
-                It.IsAny<string>(),
-                It.IsAny<UnifiedInfringementProcessed>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        _failedProducerMock
-            .Setup(p => p.Produce(
-                It.IsAny<string>(),
-                It.IsAny<InfringementValidationFailed>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        // Act
-        await harness.Bus.Publish(inputEvent);
-
-        // Assert
-        Assert.True(await sagaHarness.Consumed.Any<SupplierAInputReceived>(x => x.Context.Message.CorrelationId == correlationId));
-        Assert.NotEqual(await sagaHarness.Exists(correlationId, x => x.Final), Guid.Empty);
-
-        _unifiedProducerMock.Verify(p => p.Produce(
-                It.IsAny<string>(),
-                It.IsAny<UnifiedInfringementProcessed>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
-
-        _failedProducerMock.Verify(p => p.Produce(
-                It.IsAny<string>(),
-                It.IsAny<InfringementValidationFailed>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
 }

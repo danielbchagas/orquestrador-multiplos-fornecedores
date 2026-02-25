@@ -1,118 +1,37 @@
-﻿using AutoFixture;
+using AutoFixture;
 using Confluent.Kafka;
-using Confluent.Kafka.Admin;
-using FluentAssertions;
 using MassTransit;
 using MassTransit.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
-using Testcontainers.Kafka;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.IntegrationTests.Infrastructure.StateMachines;
 
-public class SupplierBStateMachineTests : IAsyncLifetime
+[Collection("SequentialIntegrationTests")]
+public class SupplierBStateMachineTests
+    : SupplierStateMachineIntegrationTestsBase<SupplierBStateMachine, SupplierBInputReceived>
 {
-    private readonly IFixture _fixture = new Fixture();
+    protected override string InputTopic    => "integration-source.supplier-b.v1";
+    protected override string ConsumerGroup => "integration-saga-orchestrator-test-group-b";
 
-    private readonly KafkaContainer _kafkaContainer = new KafkaBuilder()
-        .WithImage("confluentinc/cp-kafka:7.5.0")
-        .Build();
-
-    public async Task InitializeAsync()
-    {
-        await _kafkaContainer.StartAsync();
-
-        var config = new AdminClientConfig
-        {
-            BootstrapServers = _kafkaContainer.GetBootstrapAddress()
-        };
-
-        using var adminClient = new AdminClientBuilder(config).Build();
-
-        try
-        {
-            await adminClient.CreateTopicsAsync(new[]
-            {
-                new TopicSpecification { Name = "integration-source.supplier-b.v1", NumPartitions = 1, ReplicationFactor = 1 },
-                new TopicSpecification { Name = "integration-target.processed.data.v1", NumPartitions = 1, ReplicationFactor = 1 },
-                new TopicSpecification { Name = "integration-target.invalid.data.v1", NumPartitions = 1, ReplicationFactor = 1 }
-            });
-        }
-        catch (CreateTopicsException e)
-        {
-            if (e.Results.Any(r => r.Error.Code != ErrorCode.TopicAlreadyExists))
-            {
-                throw;
-            }
-        }
-    }
-    public async Task DisposeAsync() => await _kafkaContainer.DisposeAsync();
-
-    [Fact]
-    public async Task Should_Process_Validate_And_Complete_Successfully()
-    {
-        //Arrange
-        var topicInput = "integration-source.supplier-b.v1";
-        var topicSuccess = "integration-target.processed.data.v1";
-        var topicError = "integration-target.invalid.data.v1";
-        var consumerGroup = "integration-saga-orchestrator-test-group";
-
-        await using var provider = new ServiceCollection()
-            .AddLogging(l => l.AddConsole())
-            .AddMassTransitTestHarness(x =>
-            {
-                x.AddSagaStateMachine<SupplierBStateMachine, SupplierState>()
-                 .InMemoryRepository();
-
-                x.AddRider(rider =>
-                {
-                    rider.AddProducer<string, UnifiedInfringementProcessed>(topicSuccess);
-                    rider.AddProducer<string, InfringementValidationFailed>(topicError);
-
-                    rider.AddProducer<string, SupplierBInputReceived>(topicInput);
-
-                    rider.UsingKafka((context, k) =>
-                    {
-                        k.Host(_kafkaContainer.GetBootstrapAddress());
-
-                        k.TopicEndpoint<SupplierBInputReceived>(topicInput, consumerGroup, e =>
-                        {
-                            var stateMachine = context.GetRequiredService<SupplierBStateMachine>();
-                            var repository = context.GetRequiredService<ISagaRepository<SupplierState>>();
-
-                            e.StateMachineSaga(stateMachine, repository);
-
-                            e.AutoOffsetReset = Confluent.Kafka.AutoOffsetReset.Earliest;
-                        });
-                    });
-                });
-            })
-            .BuildServiceProvider(true);
-
-        var harness = provider.GetRequiredService<ITestHarness>();
-        await harness.Start();
-
-        var inputMessage = _fixture.Build<SupplierBInputReceived>()
-            .With(x => x.TotalValue, 150.00m)
+    protected override SupplierBInputReceived BuildValidInputEvent() =>
+        Fixture.Build<SupplierBInputReceived>()
+            .With(x => x.TotalValue, 355.50m)
             .Create();
 
-        // Act
-        await harness.Bus.Publish(inputMessage);
-
-        var sagaHarness = harness.GetSagaStateMachineHarness<SupplierBStateMachine, SupplierState>();
-        var message = sagaHarness.Sagas.Contains(inputMessage.CorrelationId);
-
-        // Assert
-        Assert.True(await sagaHarness.Consumed.Any<SupplierBInputReceived>());
-
-        message.Should().NotBeNull("The saga should exist with the provided CorrelationId.");
-        message.CorrelationId.Should().Be(inputMessage.CorrelationId, "The saga CorrelationId should match the published event's CorrelationId.");
-        message.ExternalId.Should().Be(inputMessage.ExternalCode, "The ExternalCode should be correctly copied from the event to the saga state.");
-        message.Plate.Should().Be(inputMessage.Plate, "The plate should be correctly copied from the event to the saga state.");
-        message.InfringementCode.Should().Be(inputMessage.Infringement, "The infringement code should be correctly copied from the event to the saga state.");
-        message.Amount.Should().Be(inputMessage.TotalValue, "The total value should be correctly copied from the event to the saga state.");
-        message.OriginSystem.Should().Be(inputMessage.OriginSystem, "The origin system should be correctly copied from the event to the saga state.");
+    protected override void RegisterTopicEndpoint(IRiderRegistrationContext context, IKafkaFactoryConfigurator k)
+    {
+        k.TopicEndpoint<SupplierBInputReceived>(InputTopic, ConsumerGroup, e =>
+        {
+            e.AutoOffsetReset = AutoOffsetReset.Earliest;
+            e.StateMachineSaga(
+                context.GetRequiredService<SupplierBStateMachine>(),
+                context.GetRequiredService<ISagaRepository<SupplierState>>());
+        });
     }
+
+    protected override (string ExternalId, string Plate, int InfringementCode, decimal Amount, string OriginSystem)
+        ProjectSagaFields(SupplierBInputReceived e) =>
+            (e.ExternalCode, e.Plate, e.Infringement, e.TotalValue, e.OriginSystem);
 }
