@@ -27,6 +27,9 @@ Este projeto é uma API desenvolvida em .NET responsável por orquestrar a inges
 │   └── Supplier.Ingestion.Orchestrator.Tests/  # Testes automatizados
 │       ├── UnitTests/                          # Testes unitários das state machines
 │       ├── IntegrationTests/                   # Testes de integração com Testcontainers
+│       ├── FunctionalTests/                    # Testes funcionais BDD (Reqnroll/Gherkin)
+│       │   ├── Features/                       # Cenários em linguagem Gherkin (.feature)
+│       │   └── StepDefinitions/               # Implementação dos passos (Given/When/Then)
 │       └── LoadTests/                          # Testes de carga com NBomber
 ├── files/                                      # Configs de infra (Grafana, Prometheus, OTel, etc.)
 ├── docker-compose.yml                          # Orquestração da API
@@ -72,10 +75,74 @@ Kafka (source.supplier-b.v1) ──┘                                     └�
 ## 🧪 Bibliotecas de Teste
 
 - **xUnit**: Framework de testes
+- **Reqnroll**: BDD (Behaviour-Driven Development) com sintaxe Gherkin (Given/When/Then)
 - **AutoFixture / AutoFixture.AutoMoq**: Geração de dados de teste e mocks automáticos
+- **Moq**: Mocking de dependências nos testes unitários e funcionais
 - **FluentAssertions**: Asserções legíveis e expressivas
 - **Testcontainers.Kafka**: Testes de integração com Kafka real via container
 - **NBomber**: Testes de carga e performance
+
+---
+
+## 🧬 Testes Funcionais (BDD)
+
+Os testes funcionais utilizam **Reqnroll** (sucessor do SpecFlow para .NET) com cenários escritos em **Gherkin** (Given/When/Then). Eles validam o comportamento end-to-end das state machines sem depender de infraestrutura externa — as dependências de Kafka são substituídas por mocks via **Moq** e o barramento pelo **MassTransit Test Harness**.
+
+### Cenários Cobertos
+
+#### `SupplierAStateMachine.feature` — State Machine do Fornecedor A
+
+| Cenário | Entrada | Resultado esperado |
+|---|---|---|
+| Infração válida processada com sucesso | Placa `ABC1234`, valor `R$ 150,00` | Saga finalizada + evento `UnifiedInfringementProcessed` produzido |
+| Valor negativo rejeitado | Placa `ABC1234`, valor `-R$ 10,00` | Saga finalizada + evento `InfringementValidationFailed` produzido |
+| Placa vazia rejeitada | Placa `""`, valor `R$ 100,00` | Saga finalizada + evento `InfringementValidationFailed` produzido |
+
+#### `SupplierBStateMachine.feature` — State Machine do Fornecedor B
+
+| Cenário | Entrada | Resultado esperado |
+|---|---|---|
+| Infração válida processada com sucesso | Placa `XYZ9876`, valor `R$ 200,00` | Saga finalizada + evento `UnifiedInfringementProcessed` produzido |
+| Valor negativo rejeitado | Placa `XYZ9876`, valor `-R$ 5,00` | Saga finalizada + evento `InfringementValidationFailed` produzido |
+| Placa vazia rejeitada | Placa `""`, valor `R$ 50,00` | Saga finalizada + evento `InfringementValidationFailed` produzido |
+
+#### `InfringementValidation.feature` — Validação de Infrações
+
+| Cenário | Condição | Resultado esperado |
+|---|---|---|
+| Todos os campos válidos | Placa, valor e ID preenchidos corretamente | Resultado válido, sem erros |
+| Placa vazia | Placa `""` | Inválido — `"Placa obrigatória"` |
+| Valor negativo | Valor `-50,00` | Inválido — `"Valor inválido"` |
+| ID de origem vazio | ExternalId `""` | Inválido — `"ID de origem não informado"` |
+| Múltiplos erros simultâneos | Placa, valor e ID inválidos ao mesmo tempo | Inválido — todos os erros acima retornados |
+
+### Arquitetura dos Testes Funcionais
+
+```
+FunctionalTests/
+├── Features/
+│   ├── InfringementValidation.feature   # Validação de regras de negócio
+│   ├── SupplierAStateMachine.feature    # Comportamento da saga do Fornecedor A
+│   └── SupplierBStateMachine.feature    # Comportamento da saga do Fornecedor B
+└── StepDefinitions/
+    ├── SupplierStateMachineStepDefinitionsBase.cs  # Passos reutilizáveis (When/Then)
+    ├── SupplierAStateMachineStepDefinitions.cs     # Passos Given do Fornecedor A
+    └── SupplierBStateMachineStepDefinitions.cs     # Passos Given do Fornecedor B
+```
+
+Os produtores Kafka (`ITopicProducer<string, UnifiedInfringementProcessed>` e `ITopicProducer<string, InfringementValidationFailed>`) são substituídos por mocks Moq, permitindo verificar quais eventos foram produzidos sem iniciar um broker real.
+
+### Executar apenas os Testes Funcionais
+
+```bash
+dotnet test --filter "Category=Functional"
+```
+
+Ou pelo nome do namespace:
+
+```bash
+dotnet test --filter "FullyQualifiedName~FunctionalTests"
+```
 
 ---
 
