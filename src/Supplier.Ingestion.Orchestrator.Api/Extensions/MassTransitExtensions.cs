@@ -10,11 +10,9 @@ public static class MassTransitExtensions
     {
         services.AddMassTransit(x =>
         {
-            // Erro 1 corrigido: state machines com tipos de estado separados — sem colisão no DI
             x.AddSagaStateMachine<SupplierAStateMachine, SupplierAState>();
             x.AddSagaStateMachine<SupplierBStateMachine, SupplierBState>();
 
-            // Erro 1 corrigido: repositórios separados com coleções MongoDB distintas
             x.AddSagaRepository<SupplierAState>()
                 .MongoDbRepository(r =>
                 {
@@ -31,8 +29,6 @@ public static class MassTransitExtensions
                     r.CollectionName = "SupplierBSagas";
                 });
 
-            // Erro 4 corrigido: ConfigureEndpoints removido — sagas são consumidas exclusivamente
-            // via Kafka TopicEndpoints; criava endpoints fantasmas no bus InMemory
             x.UsingInMemory((context, cfg) =>
             {
                 cfg.ConfigureJsonSerializerOptions(options =>
@@ -62,7 +58,6 @@ public static class MassTransitExtensions
                         e.StateMachineSaga(machine, context);
                     });
 
-                    // Erro 3 corrigido: ConcurrentMessageLimit adicionado para consistência com SupplierA
                     k.TopicEndpoint<SupplierBInputReceived>("source.supplier-b.v1", "saga-group-b", e =>
                     {
                         e.AutoOffsetReset = Confluent.Kafka.AutoOffsetReset.Earliest;
