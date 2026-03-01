@@ -10,7 +10,7 @@ namespace Supplier.Ingestion.Orchestrator.Tests.IntegrationTests.Infrastructure.
 
 [Collection("SequentialIntegrationTests")]
 public class SupplierAStateMachineTests
-    : SupplierStateMachineIntegrationTestsBase<SupplierAStateMachine, SupplierAInputReceived>
+    : SupplierStateMachineIntegrationTestsBase<SupplierAStateMachine, SupplierAState, SupplierAInputReceived>
 {
     protected override string InputTopic    => "integration-source.supplier-a.v1";
     protected override string ConsumerGroup => "integration-saga-orchestrator-test-group-a";
@@ -27,7 +27,7 @@ public class SupplierAStateMachineTests
             e.AutoOffsetReset = AutoOffsetReset.Earliest;
             e.StateMachineSaga(
                 context.GetRequiredService<SupplierAStateMachine>(),
-                context.GetRequiredService<ISagaRepository<SupplierState>>());
+                context.GetRequiredService<ISagaRepository<SupplierAState>>());
         });
     }
 

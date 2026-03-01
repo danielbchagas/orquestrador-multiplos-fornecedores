@@ -4,7 +4,7 @@ using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.UnitTests.Infrastructure.StateMachines;
 
-public class SupplierAStateMachineTests : SupplierStateMachineTestsBase<SupplierAStateMachine, SupplierAInputReceived>
+public class SupplierAStateMachineTests : SupplierStateMachineTestsBase<SupplierAStateMachine, SupplierAState, SupplierAInputReceived>
 {
     protected override SupplierAInputReceived BuildValidInputEvent(Guid correlationId) =>
         Fixture.Build<SupplierAInputReceived>()

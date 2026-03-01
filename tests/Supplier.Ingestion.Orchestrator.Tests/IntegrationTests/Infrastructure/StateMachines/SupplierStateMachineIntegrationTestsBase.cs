@@ -12,8 +12,9 @@ using Testcontainers.Kafka;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.IntegrationTests.Infrastructure.StateMachines;
 
-public abstract class SupplierStateMachineIntegrationTestsBase<TStateMachine, TInputEvent> : IAsyncLifetime
-    where TStateMachine : class, MassTransit.SagaStateMachine<SupplierState>
+public abstract class SupplierStateMachineIntegrationTestsBase<TStateMachine, TState, TInputEvent> : IAsyncLifetime
+    where TStateMachine : class, MassTransit.SagaStateMachine<TState>
+    where TState : SupplierState, new()
     where TInputEvent : class, MassTransit.CorrelatedBy<Guid>
 {
     protected readonly IFixture Fixture = new Fixture();
@@ -84,7 +85,7 @@ public abstract class SupplierStateMachineIntegrationTestsBase<TStateMachine, TI
             .AddLogging(l => l.AddConsole())
             .AddMassTransitTestHarness(x =>
             {
-                x.AddSagaStateMachine<TStateMachine, SupplierState>()
+                x.AddSagaStateMachine<TStateMachine, TState>()
                  .InMemoryRepository();
 
                 x.AddRider(rider =>
@@ -111,7 +112,7 @@ public abstract class SupplierStateMachineIntegrationTestsBase<TStateMachine, TI
         // Act
         await harness.Bus.Publish(inputMessage);
 
-        var sagaHarness = harness.GetSagaStateMachineHarness<TStateMachine, SupplierState>();
+        var sagaHarness = harness.GetSagaStateMachineHarness<TStateMachine, TState>();
         var saga = sagaHarness.Sagas.Contains(inputMessage.CorrelationId);
 
         // Assert

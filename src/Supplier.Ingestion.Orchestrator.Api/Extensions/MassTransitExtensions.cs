@@ -1,4 +1,4 @@
-﻿using MassTransit;
+using MassTransit;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
 
@@ -10,20 +10,29 @@ public static class MassTransitExtensions
     {
         services.AddMassTransit(x =>
         {
-            GlobalTopology.Send.UseCorrelationId<SupplierAInputReceived>(msg => msg.CorrelationId);
-            GlobalTopology.Send.UseCorrelationId<SupplierBInputReceived>(msg => msg.CorrelationId);
+            // Erro 1 corrigido: state machines com tipos de estado separados — sem colisão no DI
+            x.AddSagaStateMachine<SupplierAStateMachine, SupplierAState>();
+            x.AddSagaStateMachine<SupplierBStateMachine, SupplierBState>();
 
-            x.AddSagaStateMachine<SupplierAStateMachine, SupplierState>();
-            x.AddSagaStateMachine<SupplierBStateMachine, SupplierState>();
-
-            x.AddSagaRepository<SupplierState>()
+            // Erro 1 corrigido: repositórios separados com coleções MongoDB distintas
+            x.AddSagaRepository<SupplierAState>()
                 .MongoDbRepository(r =>
                 {
                     r.Connection = configuration.GetConnectionString("MongoDb");
                     r.DatabaseName = "IngestionRefineryDb";
-                    r.CollectionName = "InfringementSagas";
+                    r.CollectionName = "SupplierASagas";
                 });
 
+            x.AddSagaRepository<SupplierBState>()
+                .MongoDbRepository(r =>
+                {
+                    r.Connection = configuration.GetConnectionString("MongoDb");
+                    r.DatabaseName = "IngestionRefineryDb";
+                    r.CollectionName = "SupplierBSagas";
+                });
+
+            // Erro 4 corrigido: ConfigureEndpoints removido — sagas são consumidas exclusivamente
+            // via Kafka TopicEndpoints; criava endpoints fantasmas no bus InMemory
             x.UsingInMemory((context, cfg) =>
             {
                 cfg.ConfigureJsonSerializerOptions(options =>
@@ -31,8 +40,6 @@ public static class MassTransitExtensions
                     options.PropertyNameCaseInsensitive = true;
                     return options;
                 });
-                
-                cfg.ConfigureEndpoints(context);
             });
 
             x.AddRider(rider =>
@@ -55,9 +62,11 @@ public static class MassTransitExtensions
                         e.StateMachineSaga(machine, context);
                     });
 
+                    // Erro 3 corrigido: ConcurrentMessageLimit adicionado para consistência com SupplierA
                     k.TopicEndpoint<SupplierBInputReceived>("source.supplier-b.v1", "saga-group-b", e =>
                     {
                         e.AutoOffsetReset = Confluent.Kafka.AutoOffsetReset.Earliest;
+                        e.ConcurrentMessageLimit = 10;
 
                         e.UseRawJsonSerializer();
 

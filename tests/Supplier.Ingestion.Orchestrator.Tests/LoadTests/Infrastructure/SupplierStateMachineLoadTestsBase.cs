@@ -15,8 +15,9 @@ using Xunit.Abstractions;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.LoadTests.Infrastructure;
 
-public abstract class SupplierStateMachineLoadTestsBase<TStateMachine, TInputEvent> : IAsyncLifetime
-    where TStateMachine : class, MassTransit.SagaStateMachine<SupplierState>
+public abstract class SupplierStateMachineLoadTestsBase<TStateMachine, TState, TInputEvent> : IAsyncLifetime
+    where TStateMachine : class, MassTransit.SagaStateMachine<TState>
+    where TState : SupplierState, new()
     where TInputEvent : class, MassTransit.CorrelatedBy<Guid>
 {
     protected readonly IFixture Fixture = new Fixture();
@@ -86,7 +87,7 @@ public abstract class SupplierStateMachineLoadTestsBase<TStateMachine, TInputEve
             .AddLogging(l => l.SetMinimumLevel(LogLevel.Error))
             .AddMassTransitTestHarness(x =>
             {
-                x.AddSagaStateMachine<TStateMachine, SupplierState>()
+                x.AddSagaStateMachine<TStateMachine, TState>()
                  .InMemoryRepository();
 
                 x.AddRider(rider =>
@@ -107,7 +108,7 @@ public abstract class SupplierStateMachineLoadTestsBase<TStateMachine, TInputEve
 
                             e.StateMachineSaga(
                                 context.GetRequiredService<TStateMachine>(),
-                                context.GetRequiredService<ISagaRepository<SupplierState>>());
+                                context.GetRequiredService<ISagaRepository<TState>>());
                         });
                     });
                 });
@@ -145,7 +146,7 @@ public abstract class SupplierStateMachineLoadTestsBase<TStateMachine, TInputEve
         var scenarioStats = stats.ScenarioStats.First(s => s.ScenarioName == scenarioName);
         var totalSent     = scenarioStats.AllOkCount;
 
-        var sagaHarness = harness.GetSagaStateMachineHarness<TStateMachine, SupplierState>();
+        var sagaHarness = harness.GetSagaStateMachineHarness<TStateMachine, TState>();
 
         _output.WriteLine($"[NBomber] Messages sent successfully: {totalSent}");
         _output.WriteLine($"[NBomber] Send failures: {scenarioStats.AllFailCount}");

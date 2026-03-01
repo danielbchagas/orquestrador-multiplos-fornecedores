@@ -10,8 +10,9 @@ using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.FunctionalTests.StepDefinitions;
 
-public abstract class SupplierStateMachineStepDefinitionsBase<TStateMachine, TInputEvent> : IAsyncDisposable
-    where TStateMachine : class, SagaStateMachine<SupplierState>
+public abstract class SupplierStateMachineStepDefinitionsBase<TStateMachine, TState, TInputEvent> : IAsyncDisposable
+    where TStateMachine : class, SagaStateMachine<TState>
+    where TState : SupplierState, new()
     where TInputEvent : class, CorrelatedBy<Guid>
 {
     protected readonly Mock<ITopicProducer<string, UnifiedInfringementProcessed>> UnifiedProducerMock = new();
@@ -19,7 +20,7 @@ public abstract class SupplierStateMachineStepDefinitionsBase<TStateMachine, TIn
 
     private ServiceProvider? _provider;
     private ITestHarness _harness = null!;
-    private ISagaStateMachineTestHarness<TStateMachine, SupplierState> _sagaHarness = null!;
+    private ISagaStateMachineTestHarness<TStateMachine, TState> _sagaHarness = null!;
     protected Guid CorrelationId;
     protected TInputEvent InputEvent = null!;
 
@@ -34,13 +35,13 @@ public abstract class SupplierStateMachineStepDefinitionsBase<TStateMachine, TIn
             .AddSingleton(FailedProducerMock.Object)
             .AddMassTransitTestHarness(cfg =>
             {
-                cfg.AddSagaStateMachine<TStateMachine, SupplierState>();
+                cfg.AddSagaStateMachine<TStateMachine, TState>();
             })
             .BuildServiceProvider(true);
 
         _harness = _provider.GetRequiredService<ITestHarness>();
         await _harness.Start();
-        _sagaHarness = _harness.GetSagaStateMachineHarness<TStateMachine, SupplierState>();
+        _sagaHarness = _harness.GetSagaStateMachineHarness<TStateMachine, TState>();
     }
 
     [When(@"the event is published to the bus")]

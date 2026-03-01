@@ -4,7 +4,7 @@ using Supplier.Ingestion.Orchestrator.Api.Validators;
 
 namespace Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
 
-public class SupplierAStateMachine : MassTransitStateMachine<SupplierState>
+public class SupplierAStateMachine : MassTransitStateMachine<SupplierAState>
 {
     public Event<SupplierAInputReceived> InputReceived { get; private set; }
 

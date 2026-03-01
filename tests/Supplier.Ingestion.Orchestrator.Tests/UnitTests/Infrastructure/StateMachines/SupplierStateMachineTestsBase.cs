@@ -9,8 +9,9 @@ using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.UnitTests.Infrastructure.StateMachines;
 
-public abstract class SupplierStateMachineTestsBase<TStateMachine, TInputEvent>
-    where TStateMachine : class, MassTransit.SagaStateMachine<SupplierState>
+public abstract class SupplierStateMachineTestsBase<TStateMachine, TState, TInputEvent>
+    where TStateMachine : class, MassTransit.SagaStateMachine<TState>
+    where TState : SupplierState, new()
     where TInputEvent : class, MassTransit.CorrelatedBy<Guid>
 {
     protected readonly IFixture Fixture = new Fixture();
@@ -26,7 +27,7 @@ public abstract class SupplierStateMachineTestsBase<TStateMachine, TInputEvent>
     protected abstract TInputEvent BuildValidInputEvent(Guid correlationId);
     protected abstract TInputEvent BuildInvalidInputEvent(Guid correlationId);
 
-    private async Task<(ITestHarness harness, ISagaStateMachineTestHarness<TStateMachine, SupplierState> sagaHarness)> BuildHarness()
+    private async Task<(ITestHarness harness, ISagaStateMachineTestHarness<TStateMachine, TState> sagaHarness)> BuildHarness()
     {
         var provider = new ServiceCollection()
             .AddSingleton(Mock.Of<ILogger<TStateMachine>>())
@@ -34,14 +35,14 @@ public abstract class SupplierStateMachineTestsBase<TStateMachine, TInputEvent>
             .AddSingleton(FailedProducerMock.Object)
             .AddMassTransitTestHarness(cfg =>
             {
-                cfg.AddSagaStateMachine<TStateMachine, SupplierState>();
+                cfg.AddSagaStateMachine<TStateMachine, TState>();
             })
             .BuildServiceProvider(true);
 
         var harness = provider.GetRequiredService<ITestHarness>();
         await harness.Start();
 
-        var sagaHarness = harness.GetSagaStateMachineHarness<TStateMachine, SupplierState>();
+        var sagaHarness = harness.GetSagaStateMachineHarness<TStateMachine, TState>();
 
         return (harness, sagaHarness);
     }
