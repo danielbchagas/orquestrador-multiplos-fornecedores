@@ -7,7 +7,7 @@ namespace Supplier.Ingestion.Orchestrator.Tests.FunctionalTests.StepDefinitions;
 [Binding]
 [Scope(Feature = "Supplier B State Machine")]
 public class SupplierBStateMachineStepDefinitions
-    : SupplierStateMachineStepDefinitionsBase<SupplierBStateMachine, SupplierBState, SupplierBInputReceived>
+    : SupplierStateMachineStepDefinitionsBase<SupplierBStateMachine, SupplierState, SupplierBInputReceived>
 {
     [Given(@"a valid infringement event from Supplier B with plate ""(.*)"" and amount (.*)")]
     public void GivenAValidInfringementEventFromSupplierB(string plate, decimal amount)

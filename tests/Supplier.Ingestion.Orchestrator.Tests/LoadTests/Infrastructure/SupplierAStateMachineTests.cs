@@ -7,7 +7,7 @@ namespace Supplier.Ingestion.Orchestrator.Tests.LoadTests.Infrastructure;
 
 [Collection("SequentialIntegrationTests")]
 public class SupplierAStateMachineTests
-    : SupplierStateMachineLoadTestsBase<SupplierAStateMachine, SupplierAState, SupplierAInputReceived>
+    : SupplierStateMachineLoadTestsBase<SupplierAStateMachine, SupplierState, SupplierAInputReceived>
 {
     public SupplierAStateMachineTests(ITestOutputHelper output) : base(output) { }
 

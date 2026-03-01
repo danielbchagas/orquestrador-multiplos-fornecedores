@@ -10,20 +10,15 @@ public static class MassTransitExtensions
     {
         services.AddMassTransit(x =>
         {
-            x.AddSagaStateMachine<SupplierAStateMachine, SupplierAState>()
-                .MongoDbRepository(r =>
-                {
-                    r.Connection = configuration.GetConnectionString("MongoDb");
-                    r.DatabaseName = "IngestionRefineryDb";
-                    r.CollectionName = "SupplierASagas";
-                });
+            x.AddSagaStateMachine<SupplierAStateMachine, SupplierState>();
+            x.AddSagaStateMachine<SupplierBStateMachine, SupplierState>();
 
-            x.AddSagaStateMachine<SupplierBStateMachine, SupplierBState>()
+            x.AddSagaRepository<SupplierState>()
                 .MongoDbRepository(r =>
                 {
                     r.Connection = configuration.GetConnectionString("MongoDb");
                     r.DatabaseName = "IngestionRefineryDb";
-                    r.CollectionName = "SupplierBSagas";
+                    r.CollectionName = "InfringementSagas";
                 });
 
             x.UsingInMemory((context, cfg) =>
@@ -33,6 +28,8 @@ public static class MassTransitExtensions
                     options.PropertyNameCaseInsensitive = true;
                     return options;
                 });
+
+                cfg.ConfigureEndpoints(context);
             });
 
             x.AddRider(rider =>
