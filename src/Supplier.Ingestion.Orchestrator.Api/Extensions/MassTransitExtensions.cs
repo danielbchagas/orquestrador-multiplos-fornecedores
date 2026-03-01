@@ -10,10 +10,7 @@ public static class MassTransitExtensions
     {
         services.AddMassTransit(x =>
         {
-            x.AddSagaStateMachine<SupplierAStateMachine, SupplierAState>();
-            x.AddSagaStateMachine<SupplierBStateMachine, SupplierBState>();
-
-            x.AddSagaRepository<SupplierAState>()
+            x.AddSagaStateMachine<SupplierAStateMachine, SupplierAState>()
                 .MongoDbRepository(r =>
                 {
                     r.Connection = configuration.GetConnectionString("MongoDb");
@@ -21,7 +18,7 @@ public static class MassTransitExtensions
                     r.CollectionName = "SupplierASagas";
                 });
 
-            x.AddSagaRepository<SupplierBState>()
+            x.AddSagaStateMachine<SupplierBStateMachine, SupplierBState>()
                 .MongoDbRepository(r =>
                 {
                     r.Connection = configuration.GetConnectionString("MongoDb");
