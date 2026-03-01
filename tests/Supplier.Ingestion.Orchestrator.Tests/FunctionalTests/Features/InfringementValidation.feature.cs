@@ -24,8 +24,8 @@ namespace Supplier.Ingestion.Orchestrator.Tests.FunctionalTests.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("en-US"), "FunctionalTests/Features", "Infringement Validation", "    As the orchestrator system\r\n    I want to validate infringement data before p" +
-                "rocessing\r\n    So that only correct data flows through the pipeline", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("en-US"), "FunctionalTests/Features", "Infringement Validation", "    As the orchestrator system\n    I want to validate infringement data before pr" +
+                "ocessing\n    So that only correct data flows through the pipeline", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
         
         private global::Xunit.Abstractions.ITestOutputHelper _testOutputHelper;
         
