@@ -22,7 +22,7 @@ public abstract record IntegrationEvent : CorrelatedBy<Guid>
     private static Guid GenerateDeterministicGuid(string input)
     {
         Span<byte> namespaceBytes = stackalloc byte[16];
-        DnsNamespace.TryWriteBytes(namespaceBytes, bigEndian: true);
+        DnsNamespace.TryWriteBytes(namespaceBytes, bigEndian: true, out _);
 
         var nameBytes = Encoding.UTF8.GetBytes(input);
         var buffer = new byte[16 + nameBytes.Length];
