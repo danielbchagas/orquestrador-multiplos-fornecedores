@@ -62,12 +62,12 @@ public class IntegrationEventTests
     [Fact]
     public void CorrelationId_KnownVector_MatchesExpected()
     {
-        // RFC 4122 §B test vector:
+        // UUID v5 test vector (verified with Python's uuid.uuid5(uuid.NAMESPACE_DNS, "www.example.com")):
         //   namespace = DNS (6ba7b810-9dad-11d1-80b4-00c04fd430c8)
         //   name      = "www.example.com"
-        //   expected  = 2ed6657d-e927-568b-95e3-af9fe9239a39
+        //   expected  = 2ed6657d-e927-568b-95e1-2665a8aea6a2
         var evt = new TestIntegrationEvent("www.example.com");
 
-        evt.CorrelationId.Should().Be(new Guid("2ed6657d-e927-568b-95e3-af9fe9239a39"));
+        evt.CorrelationId.Should().Be(new Guid("2ed6657d-e927-568b-95e1-2665a8aea6a2"));
     }
 }
