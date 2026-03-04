@@ -174,3 +174,110 @@ Destino: `target.processed.data.v1`
 }
 ```
 Destino: `target.invalid.data.v1`
+
+---
+
+## 🔗 Links Úteis para Testes
+
+Após executar o projeto com `docker-compose up -d`, todos os serviços ficam disponíveis localmente. Use os links abaixo para explorar e validar cada funcionalidade do sistema.
+
+---
+
+### 🌐 API
+
+| Recurso | URL | Descrição |
+|---|---|---|
+| Raiz | [http://localhost:8080](http://localhost:8080) | Endpoint raiz da API |
+| Scalar Docs | [http://localhost:8080/scalar/v1](http://localhost:8080/scalar/v1) | Documentação interativa (substitui Swagger UI) |
+| OpenAPI JSON | [http://localhost:8080/openapi/v1.json](http://localhost:8080/openapi/v1.json) | Especificação OpenAPI em JSON |
+| Health Geral | [http://localhost:8080/health](http://localhost:8080/health) | Status completo da aplicação |
+| Health Readiness | [http://localhost:8080/health/ready](http://localhost:8080/health/ready) | Verifica conectividade com Kafka e MongoDB |
+| Health Liveness | [http://localhost:8080/health/live](http://localhost:8080/health/live) | Verifica se o processo está respondendo |
+| Grafana Probe | [http://localhost:8080/grafana](http://localhost:8080/grafana) | Endpoint de teste de observabilidade |
+
+---
+
+### 📨 Kafka UI
+
+> Cluster: **Local-Cluster**
+
+| Recurso | URL | Descrição |
+|---|---|---|
+| Painel Principal | [http://localhost:8090](http://localhost:8090) | Visão geral do cluster Kafka |
+| Todos os Tópicos | [http://localhost:8090/ui/clusters/Local-Cluster/all-topics](http://localhost:8090/ui/clusters/Local-Cluster/all-topics) | Lista todos os tópicos criados |
+| `source.supplier-a.v1` | [http://localhost:8090/ui/clusters/Local-Cluster/topics/source.supplier-a.v1/messages](http://localhost:8090/ui/clusters/Local-Cluster/topics/source.supplier-a.v1/messages) | Mensagens de entrada do Fornecedor A |
+| `source.supplier-b.v1` | [http://localhost:8090/ui/clusters/Local-Cluster/topics/source.supplier-b.v1/messages](http://localhost:8090/ui/clusters/Local-Cluster/topics/source.supplier-b.v1/messages) | Mensagens de entrada do Fornecedor B |
+| `target.processed.data.v1` | [http://localhost:8090/ui/clusters/Local-Cluster/topics/target.processed.data.v1/messages](http://localhost:8090/ui/clusters/Local-Cluster/topics/target.processed.data.v1/messages) | Eventos processados com sucesso |
+| `target.invalid.data.v1` | [http://localhost:8090/ui/clusters/Local-Cluster/topics/target.invalid.data.v1/messages](http://localhost:8090/ui/clusters/Local-Cluster/topics/target.invalid.data.v1/messages) | Eventos com falha de validação |
+| Consumer Groups | [http://localhost:8090/ui/clusters/Local-Cluster/consumer-groups](http://localhost:8090/ui/clusters/Local-Cluster/consumer-groups) | Lag e status dos grupos consumidores |
+
+---
+
+### 🗄️ MongoDB — Mongo Express
+
+> Credenciais: `admin` / `password`
+
+| Recurso | URL | Descrição |
+|---|---|---|
+| Painel Principal | [http://localhost:8181](http://localhost:8181) | Explorador visual do MongoDB |
+| Banco `IngestionRefineryDb` | [http://localhost:8181/db/IngestionRefineryDb/](http://localhost:8181/db/IngestionRefineryDb/) | Banco de dados das sagas |
+| Coleção `InfringementSagas` | [http://localhost:8181/db/IngestionRefineryDb/InfringementSagas](http://localhost:8181/db/InfringementSagas) | Estado persistido de cada saga |
+
+---
+
+### 📊 Observabilidade — Grafana
+
+> Grafana está configurado com **acesso anônimo** habilitado. Não é necessário login.
+
+#### Logs — Loki
+
+As queries abaixo usam a fonte de dados **Loki** no Grafana Explore.
+
+| Consulta | Link Direto | LogQL |
+|---|---|---|
+| Todos os logs da aplicação | [Explorar →](http://localhost:3000/explore?orgId=1&left=%7B%22datasource%22%3A%22loki%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22expr%22%3A%22%7Bexporter%3D%5C%22OTLP%5C%22%7D%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-1h%22%2C%22to%22%3A%22now%22%7D%7D) | `{exporter="OTLP"}` |
+| Apenas erros | [Explorar →](http://localhost:3000/explore?orgId=1&left=%7B%22datasource%22%3A%22loki%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22expr%22%3A%22%7Bexporter%3D%5C%22OTLP%5C%22%7D%20%7C%3D%20%5C%22error%5C%22%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-1h%22%2C%22to%22%3A%22now%22%7D%7D) | `{exporter="OTLP"} \|= "error"` |
+| Falhas de validação | [Explorar →](http://localhost:3000/explore?orgId=1&left=%7B%22datasource%22%3A%22loki%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22expr%22%3A%22%7Bexporter%3D%5C%22OTLP%5C%22%7D%20%7C%3D%20%5C%22Validation%5C%22%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-1h%22%2C%22to%22%3A%22now%22%7D%7D) | `{exporter="OTLP"} \|= "Validation"` |
+| Saga — Fornecedor A | [Explorar →](http://localhost:3000/explore?orgId=1&left=%7B%22datasource%22%3A%22loki%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22expr%22%3A%22%7Bexporter%3D%5C%22OTLP%5C%22%7D%20%7C%3D%20%5C%22SupplierA%5C%22%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-1h%22%2C%22to%22%3A%22now%22%7D%7D) | `{exporter="OTLP"} \|= "SupplierA"` |
+| Saga — Fornecedor B | [Explorar →](http://localhost:3000/explore?orgId=1&left=%7B%22datasource%22%3A%22loki%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22expr%22%3A%22%7Bexporter%3D%5C%22OTLP%5C%22%7D%20%7C%3D%20%5C%22SupplierB%5C%22%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-1h%22%2C%22to%22%3A%22now%22%7D%7D) | `{exporter="OTLP"} \|= "SupplierB"` |
+
+#### Traces — Tempo
+
+As queries abaixo usam a fonte de dados **Tempo** no Grafana Explore.
+
+| Consulta | Link Direto | TraceQL |
+|---|---|---|
+| Todos os traces (última hora) | [Explorar →](http://localhost:3000/explore?orgId=1&left=%7B%22datasource%22%3A%22tempo%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22queryType%22%3A%22traceqlSearch%22%2C%22filters%22%3A%5B%5D%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-1h%22%2C%22to%22%3A%22now%22%7D%7D) | *(busca visual por atributos)* |
+| Traces com erro | [Explorar →](http://localhost:3000/explore?orgId=1&left=%7B%22datasource%22%3A%22tempo%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22queryType%22%3A%22traceql%22%2C%22query%22%3A%22%7B%20status%3Derror%20%7D%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-1h%22%2C%22to%22%3A%22now%22%7D%7D) | `{ status=error }` |
+
+#### Métricas — Prometheus (via Grafana)
+
+As queries abaixo usam a fonte de dados **Prometheus** no Grafana Explore.
+
+| Consulta | Link Direto | PromQL |
+|---|---|---|
+| Taxa de requisições HTTP | [Explorar →](http://localhost:3000/explore?orgId=1&left=%7B%22datasource%22%3A%22prometheus%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22expr%22%3A%22rate(http_server_request_duration_seconds_count%5B5m%5D)%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-1h%22%2C%22to%22%3A%22now%22%7D%7D) | `rate(http_server_request_duration_seconds_count[5m])` |
+| Latência p95 das requisições | [Explorar →](http://localhost:3000/explore?orgId=1&left=%7B%22datasource%22%3A%22prometheus%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22expr%22%3A%22histogram_quantile(0.95%2C%20sum(rate(http_server_request_duration_seconds_bucket%5B5m%5D))%20by%20(le))%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-1h%22%2C%22to%22%3A%22now%22%7D%7D) | `histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le))` |
+| Uso de memória do processo | [Explorar →](http://localhost:3000/explore?orgId=1&left=%7B%22datasource%22%3A%22prometheus%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22expr%22%3A%22process_working_set_bytes%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-1h%22%2C%22to%22%3A%22now%22%7D%7D) | `process_working_set_bytes` |
+| Coletas de GC do .NET | [Explorar →](http://localhost:3000/explore?orgId=1&left=%7B%22datasource%22%3A%22prometheus%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22expr%22%3A%22rate(process_runtime_dotnet_gc_collections_count_total%5B5m%5D)%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-1h%22%2C%22to%22%3A%22now%22%7D%7D) | `rate(process_runtime_dotnet_gc_collections_count_total[5m])` |
+
+---
+
+### 📈 Prometheus — Acesso Direto
+
+| Recurso | URL | Descrição |
+|---|---|---|
+| UI de Queries | [http://localhost:9090/graph](http://localhost:9090/graph) | Interface nativa do Prometheus |
+| Targets Ativos | [http://localhost:9090/targets](http://localhost:9090/targets) | Status dos scrapers configurados |
+| Todas as Métricas | [http://localhost:9090/api/v1/label/__name__/values](http://localhost:9090/api/v1/label/__name__/values) | Lista de métricas disponíveis (JSON) |
+
+---
+
+### 🔭 Loki e Tempo — Acesso Direto
+
+| Serviço | URL | Descrição |
+|---|---|---|
+| Loki Health | [http://localhost:3100/ready](http://localhost:3100/ready) | Verifica se o Loki está pronto |
+| Loki Labels | [http://localhost:3100/loki/api/v1/labels](http://localhost:3100/loki/api/v1/labels) | Labels indexados no Loki |
+| Tempo Health | [http://localhost:3200/ready](http://localhost:3200/ready) | Verifica se o Tempo está pronto |
+| Tempo Métricas | [http://localhost:3200/metrics](http://localhost:3200/metrics) | Métricas internas do Tempo |
