@@ -10,8 +10,7 @@ public class InfringementValidationStepDefinitions
     private string _plate = string.Empty;
     private decimal _amount;
     private string _externalId = string.Empty;
-    private bool _isValid;
-    private string _errors = string.Empty;
+    private ValidationResult _validationResult = null!;
 
     [Given(@"an infringement with plate ""(.*)"", amount (.*) and external id ""(.*)""")]
     public void GivenAnInfringementWithFields(string plate, decimal amount, string externalId)
@@ -24,30 +23,30 @@ public class InfringementValidationStepDefinitions
     [When(@"the infringement is validated")]
     public void WhenTheInfringementIsValidated()
     {
-        (_isValid, _errors) = InfringementValidator.Validate(_plate, _amount, _externalId);
+        _validationResult = InfringementValidator.Validate(_plate, _amount, _externalId);
     }
 
     [Then(@"the validation result should be valid")]
     public void ThenTheValidationResultShouldBeValid()
     {
-        _isValid.Should().BeTrue();
+        _validationResult.IsValid.Should().BeTrue();
     }
 
     [Then(@"no validation errors should be returned")]
     public void ThenNoValidationErrorsShouldBeReturned()
     {
-        _errors.Should().BeEmpty();
+        _validationResult.Errors.Should().BeEmpty();
     }
 
     [Then(@"the validation result should be invalid")]
     public void ThenTheValidationResultShouldBeInvalid()
     {
-        _isValid.Should().BeFalse();
+        _validationResult.IsValid.Should().BeFalse();
     }
 
     [Then(@"the validation errors should contain ""(.*)""")]
     public void ThenTheValidationErrorsShouldContain(string expectedError)
     {
-        _errors.Should().Contain(expectedError);
+        _validationResult.Errors.Should().Contain(expectedError);
     }
 }

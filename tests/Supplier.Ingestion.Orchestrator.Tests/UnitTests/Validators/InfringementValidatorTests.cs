@@ -24,7 +24,7 @@ public class InfringementValidatorTests
 
         result.IsValid.Should().BeFalse();
         result.ConfidenceScore.Should().BeLessThan(1f);
-        result.Errors.Should().Contain(x => x.Contains("Valor inválido"));
+        result.Errors.Should().Contain("Valor inválido");
     }
 
     [Fact]
