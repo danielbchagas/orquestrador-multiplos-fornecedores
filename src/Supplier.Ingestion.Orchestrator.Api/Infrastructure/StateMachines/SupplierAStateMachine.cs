@@ -32,16 +32,20 @@ public class SupplierAStateMachine : MassTransitStateMachine<SupplierState>
                     ctx.Saga.InfringementCode = ctx.Message.Infringement;
                     ctx.Saga.CreatedAt = DateTime.UtcNow;
 
-                    var (isValid, error) = InfringementValidator.Validate(
+                    var result = InfringementValidator.Validate(
                         ctx.Saga.Plate,
                         ctx.Saga.Amount,
                         ctx.Saga.ExternalId
                     );
 
-                    ctx.Saga.IsValid = isValid;
-                    ctx.Saga.ValidationErrors = error;
+                    ctx.Saga.IsValid = result.IsValid;
+                    ctx.Saga.ValidationErrors = result.Errors;
+                    ctx.Saga.ConfidenceScore = result.ConfidenceScore;
+                    ctx.Saga.RiskFlags = result.RiskFlags;
 
-                    logger.LogInformation("Validation completed. IsValid: {IsValid}", ctx.Saga.IsValid);
+                    logger.LogInformation(
+                        "Validation completed. IsValid: {IsValid}, ConfidenceScore: {ConfidenceScore}, RiskFlags: {RiskFlags}",
+                        ctx.Saga.IsValid, ctx.Saga.ConfidenceScore, string.Join(", ", ctx.Saga.RiskFlags));
                 })
                 .IfElse(
                     ctx => ctx.Saga.IsValid,
@@ -58,7 +62,9 @@ public class SupplierAStateMachine : MassTransitStateMachine<SupplierState>
                                 ctx.Saga.Plate,
                                 ctx.Saga.InfringementCode,
                                 ctx.Saga.Amount,
-                                ctx.Saga.OriginSystem
+                                ctx.Saga.OriginSystem,
+                                ctx.Saga.ConfidenceScore,
+                                ctx.Saga.RiskFlags
                             ),
                             ctx.CancellationToken
                         );
@@ -77,7 +83,8 @@ public class SupplierAStateMachine : MassTransitStateMachine<SupplierState>
                             new InfringementValidationFailed(
                                 ctx.Saga.ExternalId,
                                 ctx.Saga.OriginSystem,
-                                ctx.Saga.ValidationErrors
+                                ctx.Saga.ValidationErrors,
+                                ctx.Saga.ConfidenceScore
                             ),
                             ctx.CancellationToken
                         );

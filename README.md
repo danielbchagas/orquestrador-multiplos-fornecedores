@@ -50,6 +50,65 @@ Este projeto é uma API desenvolvida em .NET responsável por orquestrar a inges
 
 ---
 
+## 🤖 Validação Inteligente com Score de Confiança
+
+A validação de infrações foi enriquecida com um sistema de **score de confiança** que vai além do binário válido/inválido, atribuindo um grau de certeza a cada evento processado.
+
+### Como funciona
+
+O `InfringementValidator` executa dois níveis de verificação:
+
+**Validações rígidas** (tornam o evento inválido, `IsValid = false`):
+- Placa ausente ou em branco → score `0.0`
+- Valor negativo → score reduzido em `0.5`
+- ID de origem ausente → score `0.0`
+
+**Validações suaves** (evento permanece válido, mas score é reduzido e flags de risco são adicionadas):
+
+| Condição | Risk Flag | Redução no Score |
+|---|---|---|
+| Placa fora do formato brasileiro (antigo ou Mercosul) | `INVALID_PLATE_FORMAT` | `-0.2` |
+| Valor igual a zero | `AMOUNT_ZERO` | `-0.1` |
+| Valor acima de R$ 10.000 | `HIGH_AMOUNT` | `-0.1` |
+
+### Formatos de placa aceitos sem penalidade
+
+| Formato | Padrão | Exemplo |
+|---|---|---|
+| Antigo (com ou sem traço) | `AAA-9999` / `AAA9999` | `ABC-1234` |
+| Mercosul | `AAA9A99` | `ABC1D23` |
+
+### Propagação do score
+
+O `ConfidenceScore` e os `RiskFlags` são armazenados no estado da saga (`SupplierState`) e propagados para os eventos de saída:
+
+- **`UnifiedInfringementProcessed`** — eventos válidos incluem `ConfidenceScore` e `RiskFlags`
+- **`InfringementValidationFailed`** — eventos inválidos incluem `ConfidenceScore` para diagnóstico
+
+### Exemplos de resultado
+
+**Score máximo (1.0):** placa no formato correto, valor positivo dentro do limite
+```json
+{ "IsValid": true, "ConfidenceScore": 1.0, "RiskFlags": [] }
+```
+
+**Score médio (0.8):** placa em formato desconhecido, demais dados válidos
+```json
+{ "IsValid": true, "ConfidenceScore": 0.8, "RiskFlags": ["INVALID_PLATE_FORMAT"] }
+```
+
+**Score baixo (0.7):** placa inválida + valor muito alto
+```json
+{ "IsValid": true, "ConfidenceScore": 0.7, "RiskFlags": ["INVALID_PLATE_FORMAT", "HIGH_AMOUNT"] }
+```
+
+**Inválido (0.5):** valor negativo
+```json
+{ "IsValid": false, "ConfidenceScore": 0.5, "Errors": "Valor inválido: -100" }
+```
+
+---
+
 ## 🔀 Fluxo de Dados
 
 ```

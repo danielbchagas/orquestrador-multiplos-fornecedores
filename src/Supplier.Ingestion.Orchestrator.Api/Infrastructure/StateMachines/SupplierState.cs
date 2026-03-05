@@ -21,6 +21,9 @@ public class SupplierState : SagaStateMachineInstance, ISagaVersion
 
     public string ValidationErrors { get; set; }
 
+    public float ConfidenceScore { get; set; }
+    public string[] RiskFlags { get; set; } = [];
+
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }
