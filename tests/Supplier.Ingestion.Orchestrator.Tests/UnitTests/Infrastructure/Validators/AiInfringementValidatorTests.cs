@@ -82,7 +82,7 @@ public class AiInfringementValidatorTests
 
         prompt.Should().Contain("ABC-1234");
         prompt.Should().Contain("7455");
-        prompt.Should().Contain("293,47").Or.Contain("293.47");
+        prompt.Should().ContainAny("293,47", "293.47");
         prompt.Should().Contain("Fornecedor_A");
     }
 
