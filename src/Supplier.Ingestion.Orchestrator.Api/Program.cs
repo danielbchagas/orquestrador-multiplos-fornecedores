@@ -15,7 +15,7 @@ builder.Services.AddSingleton(sp =>
         ? new AnthropicClient()
         : new AnthropicClient { ApiKey = apiKey };
 });
-builder.Services.AddScoped<IAiInfringementValidator, AiInfringementValidator>();
+builder.Services.AddSingleton<IAiInfringementValidator, AiInfringementValidator>();
 
 builder.Services.AddMassTransitExtensions(builder.Configuration);
 builder.Services.AddHealthCheckExtensions(builder.Configuration);

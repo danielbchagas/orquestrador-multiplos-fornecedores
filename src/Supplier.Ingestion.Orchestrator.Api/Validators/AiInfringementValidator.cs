@@ -30,7 +30,7 @@ public class AiInfringementValidator : IAiInfringementValidator
         {
             var parameters = new MessageCreateParams
             {
-                Model = Model.ClaudeOpus4_6,
+                Model = "claude-opus-4-6",
                 MaxTokens = 512,
                 System = SystemPrompt,
                 Messages =
@@ -80,32 +80,11 @@ public class AiInfringementValidator : IAiInfringementValidator
 
     internal static string ExtractTextContent(Message response)
     {
-        try
-        {
-            var json = JsonSerializer.Serialize(response,
-                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
-
-            var doc = JsonDocument.Parse(json);
-
-            if (doc.RootElement.TryGetProperty("content", out var contentArray))
-            {
-                foreach (var block in contentArray.EnumerateArray())
-                {
-                    if (block.TryGetProperty("type", out var typeEl) &&
-                        typeEl.GetString() == "text" &&
-                        block.TryGetProperty("text", out var textEl))
-                    {
-                        return textEl.GetString() ?? string.Empty;
-                    }
-                }
-            }
-        }
-        catch (Exception)
-        {
-            // ignored — fallback below
-        }
-
-        return response.ToString() ?? string.Empty;
+        return response.Content
+            .Select(block => block.Value)
+            .OfType<TextBlock>()
+            .Select(tb => tb.Text)
+            .FirstOrDefault() ?? string.Empty;
     }
 
     internal static AiValidationResult ParseResponse(string content)
