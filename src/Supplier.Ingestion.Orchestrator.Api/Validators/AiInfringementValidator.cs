@@ -75,7 +75,7 @@ public class AiInfringementValidator : IAiInfringementValidator
         4. Se há inconsistências suspeitas entre os campos
 
         Retorne APENAS este JSON (sem markdown, sem texto extra):
-        {"isValid": true, "isSuspicious": false, "analysis": "explicação concisa em português", "confidence": 0.95}
+        {{"isValid": true, "isSuspicious": false, "analysis": "explicação concisa em português", "confidence": 0.95}}
         """;
 
     internal static string ExtractTextContent(Message response)
