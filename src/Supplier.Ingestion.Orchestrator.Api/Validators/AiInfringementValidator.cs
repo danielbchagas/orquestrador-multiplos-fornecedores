@@ -57,12 +57,12 @@ public class AiInfringementValidator : IAiInfringementValidator
     }
 
     public static string BuildPrompt(string plate, int infringementCode, decimal amount, string originSystem) =>
-        $"""
+        $$"""
         Analise esta infração de trânsito brasileira:
-        - Placa: {plate}
-        - Código CTB: {infringementCode}
-        - Valor: R$ {amount:F2}
-        - Sistema de origem: {originSystem}
+        - Placa: {{plate}}
+        - Código CTB: {{infringementCode}}
+        - Valor: R$ {{amount:F2}}
+        - Sistema de origem: {{originSystem}}
 
         Verifique:
         1. Se a placa está no formato válido (padrão antigo AAA-9999 ou Mercosul AAA9A99)
@@ -75,7 +75,7 @@ public class AiInfringementValidator : IAiInfringementValidator
         4. Se há inconsistências suspeitas entre os campos
 
         Retorne APENAS este JSON (sem markdown, sem texto extra):
-        {{"isValid": true, "isSuspicious": false, "analysis": "explicação concisa em português", "confidence": 0.95}}
+        {"isValid": true, "isSuspicious": false, "analysis": "explicação concisa em português", "confidence": 0.95}
         """;
 
     internal static string ExtractTextContent(Message response)
