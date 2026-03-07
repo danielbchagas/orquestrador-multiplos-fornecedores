@@ -1,9 +1,21 @@
+using Anthropic;
 using Supplier.Ingestion.Orchestrator.Api.Extensions;
+using Supplier.Ingestion.Orchestrator.Api.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+
+builder.Services.AddSingleton(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var apiKey = config["Anthropic:ApiKey"];
+    return string.IsNullOrEmpty(apiKey)
+        ? new AnthropicClient()
+        : new AnthropicClient { ApiKey = apiKey };
+});
+builder.Services.AddScoped<IAiInfringementValidator, AiInfringementValidator>();
 
 builder.Services.AddMassTransitExtensions(builder.Configuration);
 builder.Services.AddHealthCheckExtensions(builder.Configuration);

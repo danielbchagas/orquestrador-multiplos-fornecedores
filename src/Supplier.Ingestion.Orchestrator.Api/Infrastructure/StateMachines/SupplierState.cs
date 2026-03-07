@@ -21,6 +21,9 @@ public class SupplierState : SagaStateMachineInstance, ISagaVersion
 
     public string ValidationErrors { get; set; }
 
+    public string? AiAnalysis { get; set; }
+    public bool? AiIsSuspicious { get; set; }
+
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }
