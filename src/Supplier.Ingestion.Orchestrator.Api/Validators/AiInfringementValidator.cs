@@ -56,7 +56,7 @@ public class AiInfringementValidator : IAiInfringementValidator
         }
     }
 
-    internal static string BuildPrompt(string plate, int infringementCode, decimal amount, string originSystem) =>
+    public static string BuildPrompt(string plate, int infringementCode, decimal amount, string originSystem) =>
         $"""
         Analise esta infração de trânsito brasileira:
         - Placa: {plate}
@@ -87,7 +87,7 @@ public class AiInfringementValidator : IAiInfringementValidator
             .FirstOrDefault() ?? string.Empty;
     }
 
-    internal static AiValidationResult ParseResponse(string content)
+    public static AiValidationResult ParseResponse(string content)
     {
         if (string.IsNullOrWhiteSpace(content))
             return new AiValidationResult(true, false, "Empty AI response", 0.5);
