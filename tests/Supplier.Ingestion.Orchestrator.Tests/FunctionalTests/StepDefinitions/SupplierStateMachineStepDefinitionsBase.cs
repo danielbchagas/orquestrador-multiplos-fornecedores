@@ -7,6 +7,7 @@ using Moq;
 using Reqnroll;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
+using Supplier.Ingestion.Orchestrator.Api.Validators;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.FunctionalTests.StepDefinitions;
 
@@ -16,12 +17,25 @@ public abstract class SupplierStateMachineStepDefinitionsBase<TStateMachine, TIn
 {
     protected readonly Mock<ITopicProducer<string, UnifiedInfringementProcessed>> UnifiedProducerMock = new();
     protected readonly Mock<ITopicProducer<string, InfringementValidationFailed>> FailedProducerMock = new();
+    protected readonly Mock<IAiInfringementValidator> AiValidatorMock = new();
 
     private ServiceProvider? _provider;
     private ITestHarness _harness = null!;
     private ISagaStateMachineTestHarness<TStateMachine, SupplierState> _sagaHarness = null!;
     protected Guid CorrelationId;
     protected TInputEvent InputEvent = null!;
+
+    protected SupplierStateMachineStepDefinitionsBase()
+    {
+        AiValidatorMock
+            .Setup(v => v.ValidateAsync(
+                It.IsAny<string>(),
+                It.IsAny<int>(),
+                It.IsAny<decimal>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AiValidationResult(true, false, "AI validation OK", 0.95));
+    }
 
     private async Task EnsureHarnessStarted()
     {
@@ -32,6 +46,7 @@ public abstract class SupplierStateMachineStepDefinitionsBase<TStateMachine, TIn
             .AddSingleton(Mock.Of<ILogger<TStateMachine>>())
             .AddSingleton(UnifiedProducerMock.Object)
             .AddSingleton(FailedProducerMock.Object)
+            .AddSingleton(AiValidatorMock.Object)
             .AddMassTransitTestHarness(cfg =>
             {
                 cfg.AddSagaStateMachine<TStateMachine, SupplierState>();

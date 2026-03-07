@@ -20,7 +20,7 @@ public class SupplierAStateMachine : MassTransitStateMachine<SupplierState>
 
         Initially(
             When(InputReceived)
-                .Then(ctx =>
+                .ThenAsync(async ctx =>
                 {
                     logger.LogInformation("Saga A started. ExternalCode: {ExternalCode}", ctx.Message.ExternalCode);
 
@@ -40,6 +40,33 @@ public class SupplierAStateMachine : MassTransitStateMachine<SupplierState>
 
                     ctx.Saga.IsValid = isValid;
                     ctx.Saga.ValidationErrors = error;
+
+                    if (isValid)
+                    {
+                        var aiValidator = ctx.GetPayload<IServiceProvider>()
+                            .GetRequiredService<IAiInfringementValidator>();
+
+                        var aiResult = await aiValidator.ValidateAsync(
+                            ctx.Saga.Plate,
+                            ctx.Saga.InfringementCode,
+                            ctx.Saga.Amount,
+                            ctx.Saga.OriginSystem,
+                            ctx.CancellationToken
+                        );
+
+                        ctx.Saga.AiAnalysis = aiResult.Analysis;
+                        ctx.Saga.AiIsSuspicious = aiResult.IsSuspicious;
+
+                        if (!aiResult.IsValid || aiResult.IsSuspicious)
+                        {
+                            ctx.Saga.IsValid = false;
+                            ctx.Saga.ValidationErrors = $"AI: {aiResult.Analysis}";
+                        }
+
+                        logger.LogInformation(
+                            "AI validation completed. IsSuspicious: {IsSuspicious}, Confidence: {Confidence}, Analysis: {Analysis}",
+                            aiResult.IsSuspicious, aiResult.Confidence, aiResult.Analysis);
+                    }
 
                     logger.LogInformation("Validation completed. IsValid: {IsValid}", ctx.Saga.IsValid);
                 })
