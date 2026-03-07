@@ -85,14 +85,6 @@ app.MapHealthChecks("/health/live", new HealthCheckOptions
     Predicate = _ => false
 });
 
-app.MapGet("/", () => "Supplier Ingestion Orchestrator API is running...");
-
-app.MapGet("/grafana", (ILogger<Program> logger) =>
-{
-    logger.LogInformation("Teste de Observabilidade! {Time}", DateTime.UtcNow);
-    return "Dados enviados para o Grafana!";
-});
-
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
