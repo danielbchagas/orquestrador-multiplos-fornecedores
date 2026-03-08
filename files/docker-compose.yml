@@ -80,13 +80,13 @@ services:
     entrypoint: [ '/bin/sh', '-c' ]
     command: |
       "
-      echo -e 'Aguardando Kafka...'
+      echo -e 'Waiting for Kafka...'
       cub kafka-ready -b kafka:29092 1 20
       kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --partitions 2 --replication-factor 1 --topic source.supplier-a.v1
       kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --partitions 2 --replication-factor 1 --topic source.supplier-b.v1
       kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --partitions 2 --replication-factor 1 --topic target.processed.data.v1
       kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --partitions 1 --replication-factor 1 --topic target.invalid.data.v1 --config retention.ms=2592000000
-      echo -e 'Tópicos criados!'
+      echo -e 'Topics created!'
       "
       
   otel-collector:
