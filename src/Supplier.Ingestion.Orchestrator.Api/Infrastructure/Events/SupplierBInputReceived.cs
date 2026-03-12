@@ -1,6 +1,6 @@
 ﻿namespace Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 
-public record SupplierBInputReceived : IntegrationEvent
+public record SupplierBInputReceived : IntegrationEvent, ISupplierInputEvent
 {
     public SupplierBInputReceived(
         string externalCode,

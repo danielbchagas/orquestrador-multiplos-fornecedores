@@ -47,6 +47,7 @@ public abstract class SupplierStateMachineStepDefinitionsBase<TStateMachine, TIn
             .AddSingleton(UnifiedProducerMock.Object)
             .AddSingleton(FailedProducerMock.Object)
             .AddSingleton(AiValidatorMock.Object)
+            .AddSingleton<IInfringementValidator>(new InfringementValidator())
             .AddMassTransitTestHarness(cfg =>
             {
                 cfg.AddSagaStateMachine<TStateMachine, SupplierState>();

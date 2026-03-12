@@ -8,15 +8,19 @@ public class AiInfringementValidator : IAiInfringementValidator
 {
     private readonly AnthropicClient _client;
     private readonly ILogger<AiInfringementValidator> _logger;
+    private readonly string _model;
+    private readonly int _maxTokens;
 
     private const string SystemPrompt =
         "Você é um especialista em infrações de trânsito brasileiras. " +
         "Analise os dados da infração e retorne APENAS um JSON válido sem markdown, sem explicação adicional.";
 
-    public AiInfringementValidator(AnthropicClient client, ILogger<AiInfringementValidator> logger)
+    public AiInfringementValidator(AnthropicClient client, ILogger<AiInfringementValidator> logger, IConfiguration configuration)
     {
         _client = client;
         _logger = logger;
+        _model = configuration["Anthropic:Model"] ?? "claude-opus-4-6";
+        _maxTokens = int.TryParse(configuration["Anthropic:MaxTokens"], out var tokens) ? tokens : 512;
     }
 
     public async Task<AiValidationResult> ValidateAsync(
@@ -30,8 +34,8 @@ public class AiInfringementValidator : IAiInfringementValidator
         {
             var parameters = new MessageCreateParams
             {
-                Model = "claude-opus-4-6",
-                MaxTokens = 512,
+                Model = _model,
+                MaxTokens = _maxTokens,
                 System = SystemPrompt,
                 Messages =
                 [
@@ -39,19 +43,19 @@ public class AiInfringementValidator : IAiInfringementValidator
                 ]
             };
 
-            _logger.LogInformation("Calling Claude AI for infringement validation. Plate: {Plate}, Code: {Code}",
+            _logger.LogInformation("Chamando IA para validação de infração. Placa: {Plate}, Código: {Code}",
                 plate, infringementCode);
 
             var response = await _client.Messages.Create(parameters, cancellationToken);
             var content = ExtractTextContent(response);
 
-            _logger.LogInformation("AI response received. Raw content length: {Length}", content.Length);
+            _logger.LogInformation("Resposta da IA recebida. Tamanho: {Length}", content.Length);
 
             return ParseResponse(content);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "AI validation failed, defaulting to valid. Plate: {Plate}", plate);
+            _logger.LogWarning(ex, "Validação IA falhou, assumindo válido. Placa: {Plate}", plate);
             return new AiValidationResult(true, false, "AI validation unavailable", 0.5);
         }
     }
