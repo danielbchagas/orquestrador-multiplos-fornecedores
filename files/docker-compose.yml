@@ -123,6 +123,7 @@ services:
       - ./tempo.yaml:/etc/tempo/tempo.yaml
     ports:
       - "3200:3200"
+      - "4317"
     networks:
       - saga-net
 
