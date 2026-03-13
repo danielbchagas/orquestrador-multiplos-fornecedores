@@ -26,7 +26,8 @@ public static class MassTransitExtensions
             x.AddSagaRepository<SupplierState>()
                 .MongoDbRepository(r =>
                 {
-                    r.Connection = configuration.GetConnectionString("MongoDb");
+                    r.Connection = configuration.GetConnectionString("IngestionRefineryDb")
+                        ?? configuration.GetConnectionString("MongoDb");
                     r.DatabaseName = "IngestionRefineryDb";
                     r.CollectionName = "InfringementSagas";
                 });
@@ -49,7 +50,8 @@ public static class MassTransitExtensions
 
                 rider.UsingKafka((context, k) =>
                 {
-                    k.Host(configuration.GetConnectionString("Kafka"));
+                    k.Host(configuration.GetConnectionString("kafka")
+                        ?? configuration.GetConnectionString("Kafka"));
 
                     k.TopicEndpoint<SupplierAInputReceived>(topicSupplierA, consumerGroupA, e =>
                     {

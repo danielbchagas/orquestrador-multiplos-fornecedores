@@ -18,7 +18,6 @@ public static class ApplicationExtensions
             });
         }
 
-        app.MapHealthChecks("/health");
         app.MapHealthChecks("/health/ready", new HealthCheckOptions
         {
             Predicate = check => check.Tags.Contains("ready")

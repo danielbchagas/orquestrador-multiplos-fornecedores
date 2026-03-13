@@ -12,6 +12,8 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Supplier.Ingestion.Orchestrator.Api/Supplier.Ingestion.Orchestrator.Api.csproj" Id="12af1ce2-647a-41b3-bed4-e6be2fa2a365" />
+    <Project Path="src/Supplier.Ingestion.Orchestrator.ServiceDefaults/Supplier.Ingestion.Orchestrator.ServiceDefaults.csproj" />
+    <Project Path="src/Supplier.Ingestion.Orchestrator.AppHost/Supplier.Ingestion.Orchestrator.AppHost.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Supplier.Ingestion.Orchestrator.Tests/Supplier.Ingestion.Orchestrator.Tests.csproj" Id="6e30caff-13b5-43b2-a41c-797e4d076453" />
