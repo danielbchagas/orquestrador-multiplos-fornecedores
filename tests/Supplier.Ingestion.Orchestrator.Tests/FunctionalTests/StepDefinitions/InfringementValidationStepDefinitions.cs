@@ -7,6 +7,7 @@ namespace Supplier.Ingestion.Orchestrator.Tests.FunctionalTests.StepDefinitions;
 [Binding]
 public class InfringementValidationStepDefinitions
 {
+    private readonly IInfringementValidator _validator = new InfringementValidator();
     private string _plate = string.Empty;
     private decimal _amount;
     private string _externalId = string.Empty;
@@ -24,7 +25,7 @@ public class InfringementValidationStepDefinitions
     [When(@"the infringement is validated")]
     public void WhenTheInfringementIsValidated()
     {
-        (_isValid, _errors) = InfringementValidator.Validate(_plate, _amount, _externalId);
+        (_isValid, _errors) = _validator.Validate(_plate, _amount, _externalId);
     }
 
     [Then(@"the validation result should be valid")]

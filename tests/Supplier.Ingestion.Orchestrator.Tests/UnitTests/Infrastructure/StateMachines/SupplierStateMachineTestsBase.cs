@@ -18,12 +18,19 @@ public abstract class SupplierStateMachineTestsBase<TStateMachine, TInputEvent>
     protected readonly Mock<ITopicProducer<string, UnifiedInfringementProcessed>> UnifiedProducerMock;
     protected readonly Mock<ITopicProducer<string, InfringementValidationFailed>> FailedProducerMock;
     protected readonly Mock<IAiInfringementValidator> AiValidatorMock;
+    protected readonly Mock<IInfringementValidator> InfringementValidatorMock;
 
     protected SupplierStateMachineTestsBase()
     {
         UnifiedProducerMock = new Mock<ITopicProducer<string, UnifiedInfringementProcessed>>();
         FailedProducerMock = new Mock<ITopicProducer<string, InfringementValidationFailed>>();
         AiValidatorMock = new Mock<IAiInfringementValidator>();
+        InfringementValidatorMock = new Mock<IInfringementValidator>();
+
+        InfringementValidatorMock
+            .Setup(v => v.Validate(It.IsAny<string>(), It.IsAny<decimal>(), It.IsAny<string>()))
+            .Returns<string, decimal, string>((plate, amount, externalId) =>
+                new InfringementValidator().Validate(plate, amount, externalId));
 
         AiValidatorMock
             .Setup(v => v.ValidateAsync(
@@ -45,6 +52,7 @@ public abstract class SupplierStateMachineTestsBase<TStateMachine, TInputEvent>
             .AddSingleton(UnifiedProducerMock.Object)
             .AddSingleton(FailedProducerMock.Object)
             .AddSingleton(AiValidatorMock.Object)
+            .AddSingleton(InfringementValidatorMock.Object)
             .AddMassTransitTestHarness(cfg =>
             {
                 cfg.AddSagaStateMachine<TStateMachine, SupplierState>();

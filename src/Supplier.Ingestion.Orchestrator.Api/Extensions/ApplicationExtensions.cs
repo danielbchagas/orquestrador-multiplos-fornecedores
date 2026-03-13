@@ -12,7 +12,7 @@ public static class ApplicationExtensions
             app.MapOpenApi();
             app.MapScalarApiReference(options =>
             {
-                options.WithTitle("Scalar Example API")
+                options.WithTitle("Supplier Ingestion Orchestrator API")
                     .WithTheme(ScalarTheme.Mars)
                     .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
             });

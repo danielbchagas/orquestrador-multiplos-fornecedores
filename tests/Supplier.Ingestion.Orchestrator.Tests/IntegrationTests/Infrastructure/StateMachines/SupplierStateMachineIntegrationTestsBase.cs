@@ -8,6 +8,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
+using Supplier.Ingestion.Orchestrator.Api.Validators;
+using Supplier.Ingestion.Orchestrator.Tests;
 using Testcontainers.Kafka;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.IntegrationTests.Infrastructure.StateMachines;
@@ -82,6 +84,8 @@ public abstract class SupplierStateMachineIntegrationTestsBase<TStateMachine, TI
         // Arrange
         await using var provider = new ServiceCollection()
             .AddLogging(l => l.AddConsole())
+            .AddSingleton<IInfringementValidator, InfringementValidator>()
+            .AddSingleton<IAiInfringementValidator>(new StubAiInfringementValidator())
             .AddMassTransitTestHarness(x =>
             {
                 x.AddSagaStateMachine<TStateMachine, SupplierState>()

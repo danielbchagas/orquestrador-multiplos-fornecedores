@@ -121,6 +121,7 @@ services:
     command: ["-config.file=/etc/tempo/tempo.yaml"]
     volumes:
       - ./tempo.yaml:/etc/tempo/tempo.yaml
+      - tempo-data:/var/tempo
     ports:
       - "3200:3200"
     networks:
@@ -129,13 +130,14 @@ services:
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
-    command: --config.file=/etc/prometheus/prometheus.yaml
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yaml"
+      - "--web.enable-remote-write-receiver"
+      - "--enable-feature=exemplar-storage"
     volumes:
       - ./prometheus.yaml:/etc/prometheus/prometheus.yaml
     ports:
       - "9090:9090"
-    depends_on:
-      - otel-collector
     networks:
       - saga-net
 
@@ -156,6 +158,9 @@ services:
       - ./datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
     networks:
       - saga-net
+
+volumes:
+  tempo-data:
 
 networks:
   saga-net:
