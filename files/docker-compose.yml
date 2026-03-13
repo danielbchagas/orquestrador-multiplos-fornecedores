@@ -124,8 +124,6 @@ services:
       - tempo-data:/var/tempo
     ports:
       - "3200:3200"
-    depends_on:
-      - prometheus
     networks:
       - saga-net
 
@@ -140,8 +138,6 @@ services:
       - ./prometheus.yaml:/etc/prometheus/prometheus.yaml
     ports:
       - "9090:9090"
-    depends_on:
-      - otel-collector
     networks:
       - saga-net
 
@@ -162,6 +158,9 @@ services:
       - ./datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
     networks:
       - saga-net
+
+volumes:
+  tempo-data:
 
 networks:
   saga-net:
