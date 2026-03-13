@@ -1,8 +1,8 @@
-﻿namespace Supplier.Ingestion.Orchestrator.Api.Validators;
+namespace Supplier.Ingestion.Orchestrator.Api.Validators;
 
-public class InfringementValidator
+public class InfringementValidator : IInfringementValidator
 {
-    public static (bool IsValid, string Errors) Validate(string plate, decimal amount, string externalId)
+    public (bool IsValid, string Errors) Validate(string plate, decimal amount, string externalId)
     {
         var errors = new List<string>();
 

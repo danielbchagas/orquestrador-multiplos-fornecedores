@@ -1,3 +1,5 @@
+stream_over_http_enabled: true
+
 server:
   http_listen_port: 3200
 
@@ -6,7 +8,9 @@ distributor:
     otlp:
       protocols:
         grpc:
+          endpoint: "0.0.0.0:4317"
         http:
+          endpoint: "0.0.0.0:4318"
 
 ingester:
   trace_idle_period: 10s
@@ -14,15 +18,30 @@ ingester:
 
 compactor:
   compaction:
-    compaction_window: 1h
-    max_block_bytes: 100_000_000
     block_retention: 1h
-    compacted_block_retention: 10m
+
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+      cluster: docker-compose
+  storage:
+    path: /var/tempo/generator/wal
+    remote_write:
+      - url: http://prometheus:9090/api/v1/write
+        send_exemplars: true
+  traces_storage:
+    path: /var/tempo/generator/traces
 
 storage:
   trace:
     backend: local
-    local:
-      path: /tmp/tempo/blocks
     wal:
-      path: /tmp/tempo/wal
+      path: /var/tempo/wal
+    local:
+      path: /var/tempo/blocks
+
+overrides:
+  defaults:
+    metrics_generator:
+      processors: [service-graphs, span-metrics]

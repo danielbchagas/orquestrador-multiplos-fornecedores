@@ -9,7 +9,9 @@ using Microsoft.Extensions.Logging;
 using NBomber.CSharp;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
+using Supplier.Ingestion.Orchestrator.Api.Validators;
 using System.Diagnostics;
+using Supplier.Ingestion.Orchestrator.Tests;
 using Testcontainers.Kafka;
 using Xunit.Abstractions;
 
@@ -84,6 +86,8 @@ public abstract class SupplierStateMachineLoadTestsBase<TStateMachine, TInputEve
         // Arrange
         await using var provider = new ServiceCollection()
             .AddLogging(l => l.SetMinimumLevel(LogLevel.Error))
+            .AddSingleton<IInfringementValidator, InfringementValidator>()
+            .AddSingleton<IAiInfringementValidator>(new StubAiInfringementValidator())
             .AddMassTransitTestHarness(x =>
             {
                 x.AddSagaStateMachine<TStateMachine, SupplierState>()
