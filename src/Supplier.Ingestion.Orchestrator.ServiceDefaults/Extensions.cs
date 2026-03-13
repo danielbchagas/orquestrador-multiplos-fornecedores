@@ -3,8 +3,6 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
-using OpenTelemetry;
-using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
@@ -15,7 +13,6 @@ public static class Extensions
     public static IHostApplicationBuilder AddServiceDefaults(this IHostApplicationBuilder builder)
     {
         builder.ConfigureOpenTelemetry();
-
         builder.AddDefaultHealthChecks();
 
         builder.Services.AddServiceDiscovery();
@@ -44,34 +41,19 @@ public static class Extensions
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation()
-                    .AddMeter("MassTransit");
+                    .AddMeter("MassTransit")
+                    .AddOtlpExporter();
             })
             .WithTracing(tracing =>
             {
                 tracing
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
-                    .AddSource("MassTransit");
+                    .AddSource("MassTransit")
+                    .AddOtlpExporter();
             });
 
-        AddOpenTelemetryExporters(builder);
-
         return builder;
-    }
-
-    private static void AddOpenTelemetryExporters(IHostApplicationBuilder builder)
-    {
-        var otlpEndpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
-
-        if (!string.IsNullOrWhiteSpace(otlpEndpoint))
-        {
-            builder.Services.AddOpenTelemetry()
-                .WithMetrics(metrics => metrics.AddOtlpExporter())
-                .WithTracing(tracing => tracing.AddOtlpExporter());
-
-            builder.Logging.AddOpenTelemetry(logging =>
-                logging.AddOtlpExporter());
-        }
     }
 
     public static IHostApplicationBuilder AddDefaultHealthChecks(this IHostApplicationBuilder builder)
