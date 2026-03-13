@@ -22,10 +22,6 @@ public static class ApplicationExtensions
         {
             Predicate = check => check.Tags.Contains("ready")
         });
-        app.MapHealthChecks("/health/live", new HealthCheckOptions
-        {
-            Predicate = _ => false
-        });
 
         app.UseHttpsRedirection();
         app.UseAuthorization();

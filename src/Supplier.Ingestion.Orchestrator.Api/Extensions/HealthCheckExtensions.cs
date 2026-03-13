@@ -10,12 +10,10 @@ public static class HealthCheckExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var mongoConnectionString = configuration.GetConnectionString("IngestionRefineryDb")
-            ?? configuration.GetConnectionString("MongoDb")
+        var mongoConnectionString = configuration.GetConnectionString("MongoDb")
             ?? throw new InvalidOperationException("MongoDb connection string is missing.");
 
-        var kafkaBootstrapServers = configuration.GetConnectionString("kafka")
-            ?? configuration.GetConnectionString("Kafka")
+        var kafkaBootstrapServers = configuration.GetConnectionString("Kafka")
             ?? throw new InvalidOperationException("Kafka connection string is missing.");
 
         services.AddSingleton<IMongoClient>(new MongoClient(mongoConnectionString));
