@@ -1,3 +1,6 @@
+using Confluent.Kafka;
+using Confluent.Kafka.Admin;
+
 var builder = DistributedApplication.CreateBuilder(args);
 
 var mongo = builder.AddMongoDB("mongo")
@@ -11,17 +14,38 @@ var kafka = builder.AddKafka("Kafka")
     .WithDataVolume("kafka-data")
     .WithKafkaUI();
 
-builder.AddContainer("init-kafka", "confluentinc/cp-kafka", "7.9.0")
-    .WaitFor(kafka)
-    .WithEntrypoint("/bin/sh")
-    .WithArgs("-c", """
-        kafka-topics --create --if-not-exists --bootstrap-server "$ConnectionStrings__Kafka" --partitions 2 --replication-factor 1 --topic source.supplier-a.v1 &&
-        kafka-topics --create --if-not-exists --bootstrap-server "$ConnectionStrings__Kafka" --partitions 2 --replication-factor 1 --topic source.supplier-b.v1 &&
-        kafka-topics --create --if-not-exists --bootstrap-server "$ConnectionStrings__Kafka" --partitions 2 --replication-factor 1 --topic target.processed.data.v1 &&
-        kafka-topics --create --if-not-exists --bootstrap-server "$ConnectionStrings__Kafka" --partitions 1 --replication-factor 1 --topic target.invalid.data.v1 --config retention.ms=2592000000 &&
-        echo 'Tópicos criados com sucesso!'
-        """)
-    .WithReference(kafka);
+builder.Eventing.Subscribe<ResourceReadyEvent>(kafka.Resource, async (@event, ct) =>
+{
+    var connectionString = await ((IResourceWithConnectionString)kafka.Resource).GetConnectionStringAsync(ct);
+
+    using var adminClient = new AdminClientBuilder(new AdminClientConfig
+    {
+        BootstrapServers = connectionString
+    }).Build();
+
+    var topics = new[]
+    {
+        new TopicSpecification { Name = "source.supplier-a.v1",      NumPartitions = 2, ReplicationFactor = 1 },
+        new TopicSpecification { Name = "source.supplier-b.v1",      NumPartitions = 2, ReplicationFactor = 1 },
+        new TopicSpecification { Name = "target.processed.data.v1",  NumPartitions = 2, ReplicationFactor = 1 },
+        new TopicSpecification
+        {
+            Name = "target.invalid.data.v1",
+            NumPartitions = 1,
+            ReplicationFactor = 1,
+            Configs = new Dictionary<string, string> { ["retention.ms"] = "2592000000" }
+        }
+    };
+
+    try
+    {
+        await adminClient.CreateTopicsAsync(topics);
+    }
+    catch (CreateTopicsException ex) when (ex.Results.All(r => r.Error.Code == ErrorCode.TopicAlreadyExists))
+    {
+        // tópicos já existem, sem ação necessária
+    }
+});
 
 var api = builder.AddProject<Projects.Supplier_Ingestion_Orchestrator_Api>("api")
     .WithReference(mongoDb)
