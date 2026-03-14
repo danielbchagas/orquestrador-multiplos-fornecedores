@@ -122,10 +122,57 @@ A configuração da aplicação foi modularizada em extension methods organizado
 
 ## 🔀 Fluxo de Dados
 
-```
-Kafka (source.supplier-a.v1) ──┐
-                                ├──▶ MassTransit Saga ──▶ Validação Básica ──▶ Validação IA (Claude) ──┬──▶ Kafka (target.processed.data.v1)
-Kafka (source.supplier-b.v1) ──┘                                                                      └──▶ Kafka (target.invalid.data.v1)
+```mermaid
+graph LR
+    %% Styles Definition (Colors)
+    classDef default fill:#fff,stroke:#333,stroke-width:2px;
+    classDef orchestrator fill:#e1f5fe,stroke:#039be5,stroke-width:2px;
+    classDef topicSuccess fill:#e8f5e9,stroke:#4caf50,stroke-width:2px;
+    classDef topicError fill:#ffebee,stroke:#ef5350,stroke-width:2px;
+
+    %% Subgraph 1: Suppliers
+    subgraph S1 [Suppliers]
+        direction TB
+        FA[Supplier A]
+        FB[Supplier B]
+    end
+
+    %% Subgraph 2: Kafka Cluster (Ingestion)
+    subgraph S2 [Kafka Cluster Ingestion]
+        direction TB
+        SrcA([source.supplier-a.v1])
+        SrcB([source.supplier-b.v1])
+    end
+
+    %% Subgraph 3: Context (Saga)
+    subgraph S3 [Saga Context]
+        direction TB
+        Worker((Orchestrator<br/>Saga Worker))
+    end
+
+    %% Subgraph 4: Kafka Cluster (Output)
+    subgraph S4 [Kafka Cluster Output]
+        direction TB
+        TgtSuccess([target.processed.data.v1])
+        TgtError([target.invalid.data.v1])
+    end
+
+    %% Connections
+    FA --> SrcA
+    FB --> SrcB
+    SrcA --> Worker
+    SrcB --> Worker
+    Worker -->|Valid| TgtSuccess
+    Worker -->|Invalid| TgtError
+
+    %% Styles Application
+    class Worker orchestrator;
+    class TgtSuccess topicSuccess;
+    class TgtError topicError;
+    style S1 fill:#fcfcfc,stroke:#333,stroke-width:2px
+    style S2 fill:#fcfcfc,stroke:#333,stroke-width:2px
+    style S3 fill:#fcfcfc,stroke:#333,stroke-width:2px
+    style S4 fill:#fcfcfc,stroke:#333,stroke-width:2px
 ```
 
 ### Tópicos Kafka

@@ -1,9 +1,5 @@
 <Solution>
-  <Folder Name="/docs/">
-    <File Path="Diagram.mmd" />
-    <File Path="docs/Diagram.png" />
-  </Folder>
-  <Folder Name="/deploy/">
+<Folder Name="/deploy/">
     <File Path="deploy/docker-compose.yml" />
     <File Path="deploy/docker-compose.override.yml" />
     <File Path="deploy/files/datasources.yaml" />
