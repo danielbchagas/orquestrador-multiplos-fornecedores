@@ -1,3 +1,5 @@
+using Confluent.Kafka;
+using Confluent.Kafka.Admin;
 using MassTransit;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
@@ -14,6 +16,11 @@ public static class MassTransitExtensions
         var topicSupplierB = configuration["Kafka:Topics:SupplierBInput"] ?? "source.supplier-b.v1";
         var consumerGroupA = configuration["Kafka:ConsumerGroups:SupplierA"] ?? "saga-group-a";
         var consumerGroupB = configuration["Kafka:ConsumerGroups:SupplierB"] ?? "saga-group-b";
+
+        services.AddHostedService(_ => new KafkaOutputTopicInitializer(
+            configuration.GetConnectionString("Kafka")!,
+            topicProcessed,
+            topicInvalid));
 
         services.AddMassTransit(x =>
         {
@@ -80,4 +87,17 @@ public static class MassTransitExtensions
 
         return services;
     }
+}
+
+file sealed class KafkaOutputTopicInitializer(string bootstrapServers, params string[] topics) : IHostedService
+{
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        using var admin = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = bootstrapServers }).Build();
+        var specs = topics.Select(t => new TopicSpecification { Name = t, NumPartitions = 2, ReplicationFactor = 1 }).ToList();
+        try { await admin.CreateTopicsAsync(specs); }
+        catch (CreateTopicsException ex) when (ex.Results.All(r => r.Error.Code == ErrorCode.TopicAlreadyExists)) { }
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }
