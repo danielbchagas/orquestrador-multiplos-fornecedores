@@ -57,6 +57,7 @@ public static class MassTransitExtensions
                         e.ConcurrentMessageLimit = 10;
 
                         e.UseRawJsonSerializer();
+                        e.CreateIfMissing(t => { t.NumPartitions = 2; t.ReplicationFactor = 1; });
 
                         var machine = context.GetRequiredService<SupplierAStateMachine>();
                         e.StateMachineSaga(machine, context);
@@ -68,6 +69,7 @@ public static class MassTransitExtensions
                         e.ConcurrentMessageLimit = 10;
 
                         e.UseRawJsonSerializer();
+                        e.CreateIfMissing(t => { t.NumPartitions = 2; t.ReplicationFactor = 1; });
 
                         var machine = context.GetRequiredService<SupplierBStateMachine>();
                         e.StateMachineSaga(machine, context);
