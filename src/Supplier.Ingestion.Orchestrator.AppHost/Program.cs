@@ -1,6 +1,7 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
 var mongo = builder.AddMongoDB("mongo")
+    .WithImageTag("7.0")
     .WithLifetime(ContainerLifetime.Persistent)
     .WithDataVolume("mongo-data")
     .WithMongoExpress(configureContainer: me =>
