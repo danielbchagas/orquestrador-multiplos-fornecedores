@@ -11,13 +11,16 @@ services:
     environment:
       - ConnectionStrings__Kafka=kafka:29092
       - ConnectionStrings__MongoDb=mongodb://admin:password@mongo:27017
-      - Otlp__Endpoint=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
     ports:
       - "8080:8080"
       - "8081:8081"
     depends_on:
-      - kafka
-      - mongo
-      - otel-collector
+      kafka:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
     networks:
       - saga-net
