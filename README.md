@@ -220,12 +220,6 @@ Sobe toda a infraestrutura (Kafka, MongoDB, Grafana, Prometheus, Loki, Tempo, OT
 docker-compose -f deploy/docker-compose.yml up -d
 ```
 
-Apenas infraestrutura (sem a API):
-
-```bash
-docker-compose -f deploy/files/docker-compose.yml up -d
-```
-
 ### Executar Testes
 
 ```bash

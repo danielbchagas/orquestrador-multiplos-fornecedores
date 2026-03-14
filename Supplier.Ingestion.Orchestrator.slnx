@@ -3,7 +3,6 @@
     <File Path="deploy/docker-compose.yml" />
     <File Path="deploy/docker-compose.override.yml" />
     <File Path="deploy/files/datasources.yaml" />
-    <File Path="deploy/files/docker-compose.yml" />
     <File Path="deploy/files/loki.yaml" />
     <File Path="deploy/files/otel-collector-config.yaml" />
     <File Path="deploy/files/prometheus.yaml" />
