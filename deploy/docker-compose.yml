@@ -1,4 +1,26 @@
 services:
+  supplier.ingestion.orchestrator.api:
+    image: ${DOCKER_REGISTRY-}supplieringestionorchestratorapi
+    build:
+      context: ..
+      dockerfile: src/Supplier.Ingestion.Orchestrator.Api/Dockerfile
+    environment:
+      - ConnectionStrings__Kafka=kafka:29092
+      - ConnectionStrings__MongoDb=mongodb://admin:password@mongo:27017
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    networks:
+      - saga-net
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     hostname: zookeeper
@@ -8,6 +30,12 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: echo ruok | nc localhost 2181 | grep imok
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - saga-net
 
@@ -16,7 +44,8 @@ services:
     hostname: kafka
     container_name: kafka
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     ports:
       - "9092:9092"
     environment:
@@ -27,9 +56,15 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    healthcheck:
+      test: kafka-broker-api-versions --bootstrap-server localhost:9092
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     networks:
       - saga-net
-      
+
   mongo:
     image: mongo:6.0
     container_name: saga-mongo
@@ -39,6 +74,12 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: password
+    healthcheck:
+      test: mongosh --eval "db.adminCommand('ping')" --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - saga-net
 
@@ -53,7 +94,8 @@ services:
       ME_CONFIG_MONGODB_ADMINPASSWORD: password
       ME_CONFIG_MONGODB_URL: mongodb://admin:password@mongo:27017/
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
     networks:
       - saga-net
 
@@ -61,7 +103,8 @@ services:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     ports:
       - "8090:8080"
     environment:
@@ -74,7 +117,8 @@ services:
   init-kafka:
     image: confluentinc/cp-kafka:7.5.0
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     networks:
       - saga-net
     entrypoint: [ '/bin/sh', '-c' ]
@@ -88,44 +132,6 @@ services:
       kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --partitions 1 --replication-factor 1 --topic target.invalid.data.v1 --config retention.ms=2592000000
       echo -e 'Tópicos criados!'
       "
-      
-  otel-collector:
-    image: otel/opentelemetry-collector-contrib:latest
-    container_name: otel-collector
-    command: ["--config=/etc/otel-collector-config.yaml"]
-    volumes:
-      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
-    ports:
-      - "4317:4317"
-      - "4318:4318"
-    depends_on:
-      - loki
-      - tempo
-    networks:
-      - saga-net
-      
-  loki:
-    image: grafana/loki:latest
-    container_name: loki
-    command: -config.file=/etc/loki/local-config.yaml
-    ports:
-      - "3100:3100"
-    volumes:
-      - ./loki.yaml:/etc/loki/local-config.yaml
-    networks:
-      - saga-net
-
-  tempo:
-    image: grafana/tempo:latest
-    container_name: tempo
-    command: ["-config.file=/etc/tempo/tempo.yaml"]
-    volumes:
-      - ./tempo.yaml:/etc/tempo/tempo.yaml
-      - tempo-data:/var/tempo
-    ports:
-      - "3200:3200"
-    networks:
-      - saga-net
 
   prometheus:
     image: prom/prometheus:latest
@@ -135,9 +141,70 @@ services:
       - "--web.enable-remote-write-receiver"
       - "--enable-feature=exemplar-storage"
     volumes:
-      - ./prometheus.yaml:/etc/prometheus/prometheus.yaml
+      - ./files/prometheus.yaml:/etc/prometheus/prometheus.yaml
     ports:
       - "9090:9090"
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:9090/-/healthy || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - saga-net
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./files/loki.yaml:/etc/loki/local-config.yaml
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - saga-net
+
+  tempo:
+    image: grafana/tempo:latest
+    container_name: tempo
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./files/tempo.yaml:/etc/tempo/tempo.yaml
+      - tempo-data:/var/tempo
+    ports:
+      - "3200:3200"
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:3200/ready || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - saga-net
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./files/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    depends_on:
+      loki:
+        condition: service_healthy
+      tempo:
+        condition: service_healthy
     networks:
       - saga-net
 
@@ -151,11 +218,14 @@ services:
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
       - GF_AUTH_DISABLE_LOGIN_FORM=true
     depends_on:
-      - loki
-      - prometheus
-      - tempo
+      loki:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+      tempo:
+        condition: service_healthy
     volumes:
-      - ./datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+      - ./files/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
     networks:
       - saga-net
 
