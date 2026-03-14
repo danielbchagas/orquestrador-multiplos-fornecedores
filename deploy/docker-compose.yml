@@ -6,7 +6,7 @@ services:
   supplier.ingestion.orchestrator.api:
     image: ${DOCKER_REGISTRY-}supplieringestionorchestratorapi
     build:
-      context: .
+      context: ..
       dockerfile: src/Supplier.Ingestion.Orchestrator.Api/Dockerfile
     environment:
       - ConnectionStrings__Kafka=kafka:29092

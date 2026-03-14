@@ -30,9 +30,12 @@ Este projeto é uma API desenvolvida em .NET responsável por orquestrar a inges
 │       ├── FunctionalTests/                    # Testes BDD com Reqnroll (Gherkin)
 │       ├── IntegrationTests/                   # Testes de integração com Testcontainers
 │       └── LoadTests/                          # Testes de carga com NBomber
-├── files/                                      # Configs de infra (Grafana, Prometheus, OTel, etc.)
-├── docker-compose.yml                          # Orquestração da API
-└── docker-compose.override.yml                 # Overrides para ambiente local
+├── deploy/                                     # Arquivos para deploy em produção/CI-CD
+│   ├── docker-compose.yml                      # Orquestração completa via Docker Compose
+│   ├── docker-compose.override.yml             # Overrides para ambiente local
+│   └── files/                                  # Configs de infra (Grafana, Prometheus, OTel, etc.)
+└── src/
+    └── Supplier.Ingestion.Orchestrator.AppHost/ # Orquestrador .NET Aspire (desenvolvimento local)
 ```
 
 ---
@@ -49,7 +52,8 @@ Este projeto é uma API desenvolvida em .NET responsável por orquestrar a inges
 | **OpenTelemetry** | Coleta de métricas, traces e logs |
 | **Grafana / Loki / Tempo / Prometheus** | Observabilidade (dashboards, logs, traces, métricas) |
 | **Scalar** | Documentação interativa da API (substitui Swagger UI) |
-| **Docker Compose** | Orquestração do ambiente local |
+| **.NET Aspire** | Orquestração do ambiente local (AppHost) |
+| **Docker Compose** | Deploy em produção/CI-CD |
 
 ---
 
@@ -150,21 +154,26 @@ Kafka (source.supplier-b.v1) ──┘                                          
 
 ## ▶️ Como Executar
 
-### Via Docker (recomendado)
+### Via .NET Aspire (recomendado para desenvolvimento)
+
+Sobe toda a infraestrutura (Kafka, MongoDB) e a API de forma orquestrada, com dashboard de observabilidade:
+
+```bash
+dotnet run --project src/Supplier.Ingestion.Orchestrator.AppHost
+```
+
+### Via Docker Compose (produção / CI-CD)
 
 Sobe toda a infraestrutura (Kafka, MongoDB, Grafana, Prometheus, etc.) junto com a API:
 
 ```bash
-docker-compose up -d
+docker-compose -f deploy/docker-compose.yml up -d
 ```
 
-### Via .NET CLI
-
-> ⚠️ Requer que os serviços de infraestrutura (Kafka, MongoDB, OTel Collector) já estejam em execução.
+Apenas infraestrutura (sem a API):
 
 ```bash
-docker-compose -f files/docker-compose.yml up -d
-dotnet run --project src/Supplier.Ingestion.Orchestrator.Api
+docker-compose -f deploy/files/docker-compose.yml up -d
 ```
 
 ### Executar Testes
