@@ -9,7 +9,8 @@ Este projeto é uma API desenvolvida em .NET responsável por orquestrar a inges
 ## 📐 Pré-requisitos
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- [Docker](https://www.docker.com/) e Docker Compose
+- [Docker](https://www.docker.com/) (engine — o Aspire gerencia os containers automaticamente em desenvolvimento)
+- Docker Compose (apenas para deploy em produção/CI-CD)
 
 ---
 
@@ -17,25 +18,25 @@ Este projeto é uma API desenvolvida em .NET responsável por orquestrar a inges
 
 ```
 ├── src/
-│   └── Supplier.Ingestion.Orchestrator.Api/
-│       ├── Extensions/                         # Configuração modular (MassTransit, OpenTelemetry, Health Checks)
-│       ├── Infrastructure/
-│       │   ├── Events/                         # Eventos de integração (UUID v5 determinístico)
-│       │   ├── HealthChecks/                   # Health checks (MongoDB, Kafka)
-│       │   └── StateMachines/                  # State Machines das sagas por fornecedor
-│       └── Validators/                         # Validação de infrações (regras de negócio + IA)
+│   ├── Supplier.Ingestion.Orchestrator.Api/
+│   │   ├── Extensions/                         # Configuração modular (MassTransit, Health Checks)
+│   │   ├── Infrastructure/
+│   │   │   ├── Events/                         # Eventos de integração (UUID v5 determinístico)
+│   │   │   ├── HealthChecks/                   # Health checks (MongoDB, Kafka)
+│   │   │   └── StateMachines/                  # State Machines das sagas por fornecedor
+│   │   └── Validators/                         # Validação de infrações (regras de negócio + IA)
+│   ├── Supplier.Ingestion.Orchestrator.AppHost/         # Orquestrador .NET Aspire (desenvolvimento local)
+│   └── Supplier.Ingestion.Orchestrator.ServiceDefaults/ # Configurações compartilhadas (OTel, health, resilience)
 ├── tests/
 │   └── Supplier.Ingestion.Orchestrator.Tests/
 │       ├── UnitTests/                          # Testes unitários (validators, health checks, events)
 │       ├── FunctionalTests/                    # Testes BDD com Reqnroll (Gherkin)
 │       ├── IntegrationTests/                   # Testes de integração com Testcontainers
 │       └── LoadTests/                          # Testes de carga com NBomber
-├── deploy/                                     # Arquivos para deploy em produção/CI-CD
-│   ├── docker-compose.yml                      # Orquestração completa via Docker Compose
-│   ├── docker-compose.override.yml             # Overrides para ambiente local
-│   └── files/                                  # Configs de infra (Grafana, Prometheus, OTel, etc.)
-└── src/
-    └── Supplier.Ingestion.Orchestrator.AppHost/ # Orquestrador .NET Aspire (desenvolvimento local)
+└── deploy/                                     # Arquivos para deploy em produção/CI-CD
+    ├── docker-compose.yml                      # Orquestração completa via Docker Compose
+    ├── docker-compose.override.yml             # Overrides para ambiente local
+    └── files/                                  # Configs de infra (Grafana, Prometheus, OTel, etc.)
 ```
 
 ---
@@ -52,12 +53,12 @@ Este projeto é uma API desenvolvida em .NET responsável por orquestrar a inges
 | **OpenTelemetry** | Coleta de métricas, traces e logs |
 | **Grafana / Loki / Tempo / Prometheus** | Observabilidade (dashboards, logs, traces, métricas) |
 | **Scalar** | Documentação interativa da API (substitui Swagger UI) |
-| **.NET Aspire** | Orquestração do ambiente local (AppHost) |
+| **.NET Aspire** | Orquestração do ambiente local (AppHost + ServiceDefaults) |
 | **Docker Compose** | Deploy em produção/CI-CD |
 
 ---
 
-## ✨ Funcionalidades Recentes
+## ✨ Funcionalidades
 
 ### 🤖 Validação de Infrações com IA (Claude API)
 
@@ -72,7 +73,7 @@ A resposta da IA inclui: `isValid`, `isSuspicious`, `analysis` e `confidence`. C
 
 ### 🔑 Correlation ID com UUID v5
 
-O sistema substituiu a geração de IDs baseada em MD5 por **UUID v5 (RFC 4122)**, que utiliza SHA-1 com namespace DNS para gerar GUIDs determinísticos. Isso garante:
+O sistema utiliza **UUID v5 (RFC 4122)** com SHA-1 e namespace DNS para gerar GUIDs determinísticos. Isso garante:
 
 - **Determinismo**: o mesmo código externo sempre gera o mesmo CorrelationId
 - **Rastreabilidade**: eventos com o mesmo ID externo se correlacionam automaticamente
@@ -93,7 +94,7 @@ Endpoints de saúde da aplicação para integração com orquestradores (Kuberne
 
 ### 🧪 Testes Funcionais BDD (Reqnroll)
 
-Nova camada de testes usando **Reqnroll** (Gherkin/BDD) que cobre cenários de ponta a ponta:
+Camada de testes usando **Reqnroll** (Gherkin/BDD) que cobre cenários de ponta a ponta:
 
 - Validação de infrações (placa vazia, valor negativo, código externo ausente, múltiplos erros)
 - Fluxo completo das state machines (infração válida → evento processado, infração inválida → evento de falha)
@@ -107,16 +108,16 @@ Scenario: Infração válida do Fornecedor A é finalizada com sucesso
   And um evento unificado deve ser produzido
 ```
 
-### 🧩 Refatoração em Extensions
+### 🧩 Configuração Modular em Extensions
 
 A configuração da aplicação foi modularizada em extension methods organizados:
 
 | Extension | Responsabilidade |
 |---|---|
 | `MassTransitExtensions` | Sagas, MongoDB, Kafka riders (tópicos de entrada e saída) |
-| `OpenTelemetryExtensions` | Métricas, traces e logs via OTLP |
 | `HealthCheckExtensions` | Health checks de MongoDB e Kafka |
 | `ApplicationExtensions` | Middleware pipeline (OpenAPI, Scalar, health endpoints) |
+| `ServiceDefaults` | OTel (métricas, traces, logs), service discovery e resilience via Aspire |
 
 ---
 
@@ -203,15 +204,17 @@ graph LR
 
 ### Via .NET Aspire (recomendado para desenvolvimento)
 
-Sobe toda a infraestrutura (Kafka, MongoDB) e a API de forma orquestrada, com dashboard de observabilidade:
+Sobe toda a infraestrutura (Kafka, MongoDB, Kafka UI, Mongo Express) e a API de forma orquestrada, com dashboard de observabilidade integrado:
 
 ```bash
 dotnet run --project src/Supplier.Ingestion.Orchestrator.AppHost
 ```
 
+A URL do **Aspire Dashboard** é exibida no terminal ao iniciar. Todos os serviços e suas URLs são acessíveis a partir do dashboard — as portas são alocadas dinamicamente pelo Aspire.
+
 ### Via Docker Compose (produção / CI-CD)
 
-Sobe toda a infraestrutura (Kafka, MongoDB, Grafana, Prometheus, etc.) junto com a API:
+Sobe toda a infraestrutura (Kafka, MongoDB, Grafana, Prometheus, Loki, Tempo, OTel Collector) junto com a API:
 
 ```bash
 docker-compose -f deploy/docker-compose.yml up -d
@@ -233,6 +236,21 @@ dotnet test
 
 ## 🌐 Portas dos Serviços
 
+### Via .NET Aspire (desenvolvimento)
+
+As portas são **alocadas dinamicamente**. Acesse o **Aspire Dashboard** (URL exibida no terminal ao iniciar) para visualizar os links de cada serviço.
+
+| Serviço | Observação |
+|---|---|
+| Aspire Dashboard | URL exibida no terminal (padrão: `https://localhost:15888`) |
+| API | Link disponível no Dashboard |
+| Scalar (API Docs) | `<url-da-api>/scalar/v1` |
+| Health Check | `<url-da-api>/health` |
+| Kafka UI | Link disponível no Dashboard |
+| Mongo Express | Link disponível no Dashboard |
+
+### Via Docker Compose (produção / CI-CD)
+
 | Serviço | URL |
 |---|---|
 | API | http://localhost:8080 |
@@ -242,6 +260,8 @@ dotnet test
 | Mongo Express | http://localhost:8181 |
 | Grafana | http://localhost:3000 |
 | Prometheus | http://localhost:9090 |
+| Loki | http://localhost:3100 |
+| Tempo | http://localhost:3200 |
 
 ---
 
