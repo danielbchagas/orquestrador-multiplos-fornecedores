@@ -233,6 +233,7 @@ services:
         condition: service_healthy
     volumes:
       - ./files/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+      - ./files/grafana/dashboards:/etc/grafana/provisioning/dashboards
     networks:
       - saga-net
 
