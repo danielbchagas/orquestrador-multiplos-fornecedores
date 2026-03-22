@@ -6,11 +6,18 @@ services:
       dockerfile: src/Supplier.Ingestion.Orchestrator.Api/Dockerfile
     environment:
       - ConnectionStrings__Kafka=kafka:29092
-      - ConnectionStrings__MongoDb=mongodb://admin:password@mongo:27017
+      - ConnectionStrings__MongoDb=mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongo:27017
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - Anthropic__ApiKey=${ANTHROPIC_API_KEY}
     ports:
       - "8080:8080"
       - "8081:8081"
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8080/health/ready || exit 1
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     depends_on:
       kafka:
         condition: service_healthy
@@ -21,41 +28,27 @@ services:
     networks:
       - saga-net
 
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    hostname: zookeeper
-    container_name: zookeeper
-    ports:
-      - "2181:2181"
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    healthcheck:
-      test: echo ruok | nc localhost 2181 | grep imok
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    networks:
-      - saga-net
-
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     hostname: kafka
     container_name: kafka
-    depends_on:
-      zookeeper:
-        condition: service_healthy
     ports:
       - "9092:9092"
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:9092
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qg
+    volumes:
+      - kafka-data:/var/lib/kafka/data
     healthcheck:
       test: kafka-broker-api-versions --bootstrap-server localhost:9092
       interval: 10s
@@ -72,8 +65,10 @@ services:
     ports:
       - "27017:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    volumes:
+      - mongo-data:/data/db
     healthcheck:
       test: mongosh --eval "db.adminCommand('ping')" --quiet
       interval: 10s
@@ -90,9 +85,9 @@ services:
     ports:
       - "8181:8081"
     environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
-      ME_CONFIG_MONGODB_ADMINPASSWORD: password
-      ME_CONFIG_MONGODB_URL: mongodb://admin:password@mongo:27017/
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_ROOT_USERNAME}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_ROOT_PASSWORD}
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongo:27017/
     depends_on:
       mongo:
         condition: service_healthy
@@ -110,7 +105,6 @@ services:
     environment:
       KAFKA_CLUSTERS_0_NAME: Local-Cluster
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
-      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
     networks:
       - saga-net
 
@@ -133,6 +127,40 @@ services:
       echo -e 'Tópicos criados!'
       "
 
+  supplier.a.producer.api:
+    image: ${DOCKER_REGISTRY-}supplieraproducerapi
+    build:
+      context: ..
+      dockerfile: src/Supplier.A.Producer.Api/Dockerfile
+    environment:
+      - ConnectionStrings__Kafka=kafka:29092
+    ports:
+      - "8082:8080"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      init-kafka:
+        condition: service_completed_successfully
+    networks:
+      - saga-net
+
+  supplier.b.producer.api:
+    image: ${DOCKER_REGISTRY-}supplierbproducerapi
+    build:
+      context: ..
+      dockerfile: src/Supplier.B.Producer.Api/Dockerfile
+    environment:
+      - ConnectionStrings__Kafka=kafka:29092
+    ports:
+      - "8083:8080"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      init-kafka:
+        condition: service_completed_successfully
+    networks:
+      - saga-net
+
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -142,6 +170,7 @@ services:
       - "--enable-feature=exemplar-storage"
     volumes:
       - ./files/prometheus.yaml:/etc/prometheus/prometheus.yaml
+      - ./files/alert.rules.yaml:/etc/prometheus/alert.rules.yaml
     ports:
       - "9090:9090"
     healthcheck:
@@ -214,9 +243,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_SECURITY_ADMIN_USER=${GF_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_ADMIN_PASSWORD}
+      - GF_AUTH_ANONYMOUS_ENABLED=false
     depends_on:
       loki:
         condition: service_healthy
@@ -226,10 +255,13 @@ services:
         condition: service_healthy
     volumes:
       - ./files/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+      - ./files/grafana/dashboards:/etc/grafana/provisioning/dashboards
     networks:
       - saga-net
 
 volumes:
+  mongo-data:
+  kafka-data:
   tempo-data:
 
 networks:

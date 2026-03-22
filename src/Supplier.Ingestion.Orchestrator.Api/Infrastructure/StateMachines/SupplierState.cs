@@ -26,4 +26,5 @@ public class SupplierState : SagaStateMachineInstance, ISagaVersion
 
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+    public DateTime? ProcessedAt { get; set; }
 }

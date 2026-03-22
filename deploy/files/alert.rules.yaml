@@ -1,0 +1,46 @@
+groups:
+  - name: supplier_ingestion_alerts
+    rules:
+
+      - alert: OtelCollectorDown
+        expr: absent(up{job="otel-collector"})
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "OTel Collector sem métricas"
+          description: "Nenhuma métrica recebida do otel-collector por mais de 1 minuto. A API pode estar fora do ar."
+
+      - alert: HighConsumerLatency
+        expr: >
+          histogram_quantile(0.95,
+            rate(messaging_masstransit_consumer_duration_seconds_bucket[5m])
+          ) > 30
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latência alta no processamento de mensagens (P95 > 30s)"
+          description: "O P95 do tempo de consumo ultrapassou 30 segundos nos últimos 5 minutos."
+
+      - alert: HighInvalidInfringementRate
+        expr: >
+          rate(messaging_masstransit_publish_total{messaging_destination_name="target.invalid.data.v1"}[5m])
+          /
+          (rate(messaging_masstransit_publish_total[5m]) + 1) > 0.3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Taxa alta de infrações inválidas (> 30%)"
+          description: "Mais de 30% das infrações estão sendo rejeitadas pela validação nos últimos 5 minutos."
+
+      - alert: NoMessagesConsumed
+        expr: >
+          sum(rate(messaging_masstransit_consumer_duration_seconds_count[10m])) == 0
+        for: 10m
+        labels:
+          severity: info
+        annotations:
+          summary: "Nenhuma mensagem processada nos últimos 10 minutos"
+          description: "Possível interrupção no fluxo de eventos Kafka ou ausência de produtores ativos."
