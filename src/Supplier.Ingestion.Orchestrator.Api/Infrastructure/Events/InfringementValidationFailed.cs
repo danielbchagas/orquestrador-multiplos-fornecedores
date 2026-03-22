@@ -8,7 +8,7 @@ public record InfringementValidationFailed : IntegrationEvent
         string plate,
         int infringementCode,
         decimal amount,
-        string reason)
+        string failureReason)
         : base(originId)
     {
         OriginId = originId;
@@ -16,7 +16,7 @@ public record InfringementValidationFailed : IntegrationEvent
         Plate = plate;
         InfringementCode = infringementCode;
         Amount = amount;
-        FailureReason = reason;
+        FailureReason = failureReason;
         FailedAt = DateTime.UtcNow;
     }
 
