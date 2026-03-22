@@ -149,6 +149,7 @@ services:
       - "--enable-feature=exemplar-storage"
     volumes:
       - ./files/prometheus.yaml:/etc/prometheus/prometheus.yaml
+      - ./files/alert.rules.yaml:/etc/prometheus/alert.rules.yaml
     ports:
       - "9090:9090"
     healthcheck:

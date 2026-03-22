@@ -1,6 +1,7 @@
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 using MassTransit;
+using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Consumers;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
 
@@ -16,6 +17,7 @@ public static class MassTransitExtensions
         var topicSupplierB = configuration["Kafka:Topics:SupplierBInput"] ?? "source.supplier-b.v1";
         var consumerGroupA = configuration["Kafka:ConsumerGroups:SupplierA"] ?? "saga-group-a";
         var consumerGroupB = configuration["Kafka:ConsumerGroups:SupplierB"] ?? "saga-group-b";
+        var consumerGroupDlq = configuration["Kafka:ConsumerGroups:Dlq"] ?? "dlq-group";
 
         services.AddHostedService(_ => new KafkaOutputTopicInitializer(
             configuration.GetConnectionString("Kafka")!,
@@ -38,6 +40,8 @@ public static class MassTransitExtensions
                     r.CollectionName = "InfringementSagas";
                 });
 
+            x.AddConsumer<InvalidInfringementConsumer>();
+
             x.UsingInMemory((context, cfg) =>
             {
                 cfg.ConfigureJsonSerializerOptions(options =>
@@ -53,6 +57,8 @@ public static class MassTransitExtensions
             {
                 rider.AddProducer<string, UnifiedInfringementProcessed>(topicProcessed);
                 rider.AddProducer<string, InfringementValidationFailed>(topicInvalid);
+                rider.AddProducer<string, SupplierAInputReceived>(topicSupplierA);
+                rider.AddProducer<string, SupplierBInputReceived>(topicSupplierB);
 
                 rider.UsingKafka((context, k) =>
                 {
@@ -60,9 +66,9 @@ public static class MassTransitExtensions
 
                     k.TopicEndpoint<SupplierAInputReceived>(topicSupplierA, consumerGroupA, e =>
                     {
-                        e.AutoOffsetReset = Confluent.Kafka.AutoOffsetReset.Earliest;
+                        e.AutoOffsetReset = AutoOffsetReset.Earliest;
                         e.ConcurrentMessageLimit = 10;
-
+                        e.UseMessageRetry(r => r.Exponential(3, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(2)));
                         e.UseRawJsonSerializer();
                         e.CreateIfMissing(t => { t.NumPartitions = 2; t.ReplicationFactor = 1; });
 
@@ -72,14 +78,21 @@ public static class MassTransitExtensions
 
                     k.TopicEndpoint<SupplierBInputReceived>(topicSupplierB, consumerGroupB, e =>
                     {
-                        e.AutoOffsetReset = Confluent.Kafka.AutoOffsetReset.Earliest;
+                        e.AutoOffsetReset = AutoOffsetReset.Earliest;
                         e.ConcurrentMessageLimit = 10;
-
+                        e.UseMessageRetry(r => r.Exponential(3, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(2)));
                         e.UseRawJsonSerializer();
                         e.CreateIfMissing(t => { t.NumPartitions = 2; t.ReplicationFactor = 1; });
 
                         var machine = context.GetRequiredService<SupplierBStateMachine>();
                         e.StateMachineSaga(machine, context);
+                    });
+
+                    k.TopicEndpoint<InfringementValidationFailed>(topicInvalid, consumerGroupDlq, e =>
+                    {
+                        e.AutoOffsetReset = AutoOffsetReset.Earliest;
+                        e.UseRawJsonSerializer();
+                        e.ConfigureConsumer<InvalidInfringementConsumer>(context);
                     });
                 });
             });
