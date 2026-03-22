@@ -2,7 +2,13 @@
 
 ## 📋 Introdução
 
-Este projeto é uma API desenvolvida em .NET responsável por orquestrar a ingestão de dados de múltiplos fornecedores. O sistema consome eventos de infrações a partir de tópicos Kafka específicos por fornecedor, valida os dados recebidos através de State Machines (Saga Pattern via MassTransit), e publica o resultado em tópicos de saída — separando eventos válidos de inválidos. O estado das sagas é persistido no MongoDB.
+Este projeto implementa um sistema completo de ingestão e orquestração de dados de múltiplos fornecedores. O ecossistema é composto por três APIs:
+
+- **Supplier A Producer** — simula o sistema legado do Fornecedor A, publicando infrações no tópico Kafka `source.supplier-a.v1`
+- **Supplier B Producer** — simula o sistema legado do Fornecedor B, publicando infrações no tópico Kafka `source.supplier-b.v1`
+- **Orchestrator API** — consome os tópicos de entrada, valida os dados via State Machines (Saga Pattern), e publica o resultado nos tópicos de saída
+
+O estado das sagas é persistido no MongoDB. A validação combina regras de negócio com análise inteligente via Claude API (Anthropic).
 
 ---
 
@@ -11,6 +17,7 @@ Este projeto é uma API desenvolvida em .NET responsável por orquestrar a inges
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
 - [Docker](https://www.docker.com/) (engine — o Aspire gerencia os containers automaticamente em desenvolvimento)
 - Docker Compose (apenas para deploy em produção/CI-CD)
+- Chave de API da Anthropic (`ANTHROPIC_API_KEY`)
 
 ---
 
@@ -18,25 +25,31 @@ Este projeto é uma API desenvolvida em .NET responsável por orquestrar a inges
 
 ```
 ├── src/
+│   ├── Supplier.A.Producer.Api/                  # API produtora do Fornecedor A
+│   │   └── Properties/launchSettings.json
+│   ├── Supplier.B.Producer.Api/                  # API produtora do Fornecedor B
+│   │   └── Properties/launchSettings.json
 │   ├── Supplier.Ingestion.Orchestrator.Api/
-│   │   ├── Extensions/                         # Configuração modular (MassTransit, Health Checks)
+│   │   ├── Extensions/                           # Configuração modular (MassTransit, Health Checks)
 │   │   ├── Infrastructure/
-│   │   │   ├── Events/                         # Eventos de integração (UUID v5 determinístico)
-│   │   │   ├── HealthChecks/                   # Health checks (MongoDB, Kafka)
-│   │   │   └── StateMachines/                  # State Machines das sagas por fornecedor
-│   │   └── Validators/                         # Validação de infrações (regras de negócio + IA)
-│   ├── Supplier.Ingestion.Orchestrator.AppHost/         # Orquestrador .NET Aspire (desenvolvimento local)
+│   │   │   ├── Consumers/                        # Consumer da DLQ
+│   │   │   ├── Events/                           # Eventos de integração (UUID v5 determinístico)
+│   │   │   ├── HealthChecks/                     # Health checks (MongoDB, Kafka)
+│   │   │   ├── Repositories/                     # Repositório de infrações inválidas
+│   │   │   └── StateMachines/                    # State Machines das sagas por fornecedor
+│   │   └── Validators/                           # Validação de infrações (regras de negócio + IA)
+│   ├── Supplier.Ingestion.Orchestrator.AppHost/  # Orquestrador .NET Aspire (desenvolvimento local)
 │   └── Supplier.Ingestion.Orchestrator.ServiceDefaults/ # Configurações compartilhadas (OTel, health, resilience)
 ├── tests/
 │   └── Supplier.Ingestion.Orchestrator.Tests/
-│       ├── UnitTests/                          # Testes unitários (validators, health checks, events)
-│       ├── FunctionalTests/                    # Testes BDD com Reqnroll (Gherkin)
-│       ├── IntegrationTests/                   # Testes de integração com Testcontainers
-│       └── LoadTests/                          # Testes de carga com NBomber
-└── deploy/                                     # Arquivos para deploy em produção/CI-CD
-    ├── docker-compose.yml                      # Orquestração completa via Docker Compose
-    ├── docker-compose.override.yml             # Overrides para ambiente local
-    └── files/                                  # Configs de infra (Grafana, Prometheus, OTel, etc.)
+│       ├── UnitTests/                            # Testes unitários (validators, health checks, events)
+│       ├── FunctionalTests/                      # Testes BDD com Reqnroll (Gherkin)
+│       ├── IntegrationTests/                     # Testes de integração com Testcontainers
+│       └── LoadTests/                            # Testes de carga com NBomber
+└── deploy/                                       # Arquivos para deploy em produção/CI-CD
+    ├── docker-compose.yml                        # Orquestração completa via Docker Compose
+    ├── docker-compose.override.yml               # Overrides para ambiente local
+    └── files/                                    # Configs de infra (Grafana, Prometheus, OTel, etc.)
 ```
 
 ---
@@ -45,8 +58,8 @@ Este projeto é uma API desenvolvida em .NET responsável por orquestrar a inges
 
 | Tecnologia | Finalidade |
 |---|---|
-| **.NET 10** | Plataforma principal da API |
-| **MassTransit** | Orquestração de sagas (Saga Pattern) |
+| **.NET 10** | Plataforma principal |
+| **MassTransit** | Orquestração de sagas (Saga Pattern) e Kafka riders |
 | **Apache Kafka** | Broker de mensageria (entrada e saída de eventos) |
 | **MongoDB** | Persistência do estado das sagas |
 | **Anthropic Claude API** | Validação inteligente de infrações via IA |
@@ -55,10 +68,20 @@ Este projeto é uma API desenvolvida em .NET responsável por orquestrar a inges
 | **Scalar** | Documentação interativa da API (substitui Swagger UI) |
 | **.NET Aspire** | Orquestração do ambiente local (AppHost + ServiceDefaults) |
 | **Docker Compose** | Deploy em produção/CI-CD |
+| **Confluent.Kafka** | Producer Kafka nativo nas APIs dos fornecedores |
 
 ---
 
 ## ✨ Funcionalidades
+
+### 🏭 Simulação de Fornecedores (Supplier A e B Producers)
+
+Cada fornecedor expõe uma API Minimal API com dois endpoints de publicação:
+
+- `POST /infringements` — publica uma infração específica com dados informados
+- `POST /infringements/simulate?count=N` — gera e publica até 100 infrações com dados aleatórios válidos (placas no formato antigo AAA-9999 ou Mercosul AAA9A99)
+
+Ambos os produtores computam o `CorrelationId` via **UUID v5** (mesmo algoritmo do orquestrador), garantindo idempotência ponta a ponta.
 
 ### 🤖 Validação de Infrações com IA (Claude API)
 
@@ -78,10 +101,18 @@ O sistema utiliza **UUID v5 (RFC 4122)** com SHA-1 e namespace DNS para gerar GU
 - **Determinismo**: o mesmo código externo sempre gera o mesmo CorrelationId
 - **Rastreabilidade**: eventos com o mesmo ID externo se correlacionam automaticamente
 - **Sem consultas ao banco**: IDs podem ser computados sem acesso ao banco de dados
+- **Idempotência ponta a ponta**: produtores e orquestrador usam o mesmo algoritmo
+
+### 🔁 DLQ com Reprocessamento
+
+Infrações inválidas são armazenadas no MongoDB e disponibilizadas via API:
+
+| Endpoint | Método | Descrição |
+|---|---|---|
+| `/dlq` | `GET` | Lista as últimas 50 infrações inválidas |
+| `/dlq/{id}/retry` | `POST` | Reprocessa uma infração pelo ID, republicando no tópico de origem |
 
 ### 🏥 Health Checks (MongoDB e Kafka)
-
-Endpoints de saúde da aplicação para integração com orquestradores (Kubernetes, Docker, etc.):
 
 | Endpoint | Finalidade |
 |---|---|
@@ -89,16 +120,9 @@ Endpoints de saúde da aplicação para integração com orquestradores (Kuberne
 | `/health/ready` | Readiness probe — verifica MongoDB e Kafka |
 | `/health/live` | Liveness probe — sempre retorna saudável |
 
-- **MongoDB**: executa comando `ping` no banco admin
-- **Kafka**: consulta metadados dos brokers via AdminClient (timeout de 5s)
-
 ### 🧪 Testes Funcionais BDD (Reqnroll)
 
 Camada de testes usando **Reqnroll** (Gherkin/BDD) que cobre cenários de ponta a ponta:
-
-- Validação de infrações (placa vazia, valor negativo, código externo ausente, múltiplos erros)
-- Fluxo completo das state machines (infração válida → evento processado, infração inválida → evento de falha)
-- Uso do MassTransit Test Harness com dependências mockadas
 
 ```gherkin
 Scenario: Infração válida do Fornecedor A é finalizada com sucesso
@@ -109,8 +133,6 @@ Scenario: Infração válida do Fornecedor A é finalizada com sucesso
 ```
 
 ### 🧩 Configuração Modular em Extensions
-
-A configuração da aplicação foi modularizada em extension methods organizados:
 
 | Extension | Responsabilidade |
 |---|---|
@@ -125,40 +147,34 @@ A configuração da aplicação foi modularizada em extension methods organizado
 
 ```mermaid
 graph LR
-    %% Styles Definition (Colors)
-    classDef default fill:#fff,stroke:#333,stroke-width:2px;
+    classDef producer fill:#fff9c4,stroke:#f9a825,stroke-width:2px;
     classDef orchestrator fill:#e1f5fe,stroke:#039be5,stroke-width:2px;
     classDef topicSuccess fill:#e8f5e9,stroke:#4caf50,stroke-width:2px;
     classDef topicError fill:#ffebee,stroke:#ef5350,stroke-width:2px;
 
-    %% Subgraph 1: Suppliers
-    subgraph S1 [Suppliers]
+    subgraph S1 [Supplier Producers]
         direction TB
-        FA[Supplier A]
-        FB[Supplier B]
+        FA[Supplier A Producer API]
+        FB[Supplier B Producer API]
     end
 
-    %% Subgraph 2: Kafka Cluster (Ingestion)
     subgraph S2 [Kafka Cluster Ingestion]
         direction TB
         SrcA([source.supplier-a.v1])
         SrcB([source.supplier-b.v1])
     end
 
-    %% Subgraph 3: Context (Saga)
     subgraph S3 [Saga Context]
         direction TB
         Worker((Orchestrator<br/>Saga Worker))
     end
 
-    %% Subgraph 4: Kafka Cluster (Output)
     subgraph S4 [Kafka Cluster Output]
         direction TB
         TgtSuccess([target.processed.data.v1])
         TgtError([target.invalid.data.v1])
     end
 
-    %% Connections
     FA --> SrcA
     FB --> SrcB
     SrcA --> Worker
@@ -166,7 +182,7 @@ graph LR
     Worker -->|Valid| TgtSuccess
     Worker -->|Invalid| TgtError
 
-    %% Styles Application
+    class FA,FB producer;
     class Worker orchestrator;
     class TgtSuccess topicSuccess;
     class TgtError topicError;
@@ -178,12 +194,119 @@ graph LR
 
 ### Tópicos Kafka
 
-| Tópico | Direção | Descrição |
+| Tópico | Direção | Publisher | Descrição |
+|---|---|---|---|
+| `source.supplier-a.v1` | Entrada | Supplier A Producer | Eventos do Fornecedor A |
+| `source.supplier-b.v1` | Entrada | Supplier B Producer | Eventos do Fornecedor B |
+| `target.processed.data.v1` | Saída | Orchestrator | Eventos validados com sucesso |
+| `target.invalid.data.v1` | Saída | Orchestrator | Eventos com falha de validação |
+
+---
+
+## ▶️ Como Executar
+
+### Via .NET Aspire (recomendado para desenvolvimento)
+
+Configure a chave da API Anthropic via User Secrets (uma única vez):
+
+```bash
+dotnet user-secrets set "Anthropic:ApiKey" "sk-ant-..." --project src/Supplier.Ingestion.Orchestrator.Api
+```
+
+Suba toda a infraestrutura e as três APIs:
+
+```bash
+dotnet run --project src/Supplier.Ingestion.Orchestrator.AppHost
+```
+
+A URL do **Aspire Dashboard** é exibida no terminal ao iniciar. Os três serviços e seus links diretos para o Scalar ficam disponíveis no dashboard — as portas são alocadas dinamicamente.
+
+### Via Docker Compose (produção / CI-CD)
+
+```bash
+cd deploy
+cp .env.example .env
+# Edite .env e preencha ANTHROPIC_API_KEY, MONGO_ROOT_PASSWORD, etc.
+docker compose up --build
+```
+
+### Executar Testes
+
+```bash
+dotnet test
+```
+
+---
+
+## 🌐 Portas e Serviços
+
+### Via .NET Aspire (desenvolvimento)
+
+As portas são **alocadas dinamicamente**. Acesse o **Aspire Dashboard** (URL exibida no terminal) para os links de cada serviço.
+
+| Serviço | Porta padrão | Scalar UI |
 |---|---|---|
-| `source.supplier-a.v1` | Entrada | Eventos do Fornecedor A |
-| `source.supplier-b.v1` | Entrada | Eventos do Fornecedor B |
-| `target.processed.data.v1` | Saída | Eventos validados com sucesso |
-| `target.invalid.data.v1` | Saída | Eventos com falha de validação |
+| Aspire Dashboard | `https://localhost:15888` | — |
+| Orchestrator API | dinâmica | `<url>/scalar/v1` |
+| Supplier A Producer | `http://localhost:5001` | `http://localhost:5001/scalar/v1` |
+| Supplier B Producer | `http://localhost:5002` | `http://localhost:5002/scalar/v1` |
+| Kafka UI | dinâmica | — |
+| Mongo Express | dinâmica | — |
+
+### Via Docker Compose (produção / CI-CD)
+
+| Serviço | URL |
+|---|---|
+| Orchestrator API | http://localhost:8080 |
+| Supplier A Producer | http://localhost:8082 |
+| Supplier B Producer | http://localhost:8083 |
+| Scalar (Orchestrator) | http://localhost:8080/scalar/v1 |
+| Scalar (Supplier A) | http://localhost:8082/scalar/v1 |
+| Scalar (Supplier B) | http://localhost:8083/scalar/v1 |
+| Health Check | http://localhost:8080/health |
+| Kafka UI | http://localhost:8090 |
+| Mongo Express | http://localhost:8181 |
+| Grafana | http://localhost:3000 |
+| Prometheus | http://localhost:9090 |
+| Loki | http://localhost:3100 |
+| Tempo | http://localhost:3200 |
+
+---
+
+## 🕹️ Testando o Fluxo Completo
+
+### 1. Publicar infrações
+
+```bash
+# Simular 5 infrações aleatórias do Fornecedor A
+curl -X POST "http://localhost:5001/infringements/simulate?count=5"
+
+# Simular 5 infrações aleatórias do Fornecedor B
+curl -X POST "http://localhost:5002/infringements/simulate?count=5"
+
+# Publicar infração específica do Fornecedor A
+curl -X POST http://localhost:5001/infringements \
+  -H "Content-Type: application/json" \
+  -d '{"externalCode":"TESTE-001","plate":"ABC-1234","infringement":511,"totalValue":195.23}'
+```
+
+### 2. Acompanhar o processamento
+
+| Interface | URL | O que ver |
+|---|---|---|
+| Aspire Dashboard | `https://localhost:15888` | Traces, logs, métricas |
+| Kafka UI | dinâmica (dashboard) | Mensagens nos tópicos |
+| Mongo Express | dinâmica (dashboard) | Estado das sagas |
+
+### 3. Consultar e reprocessar falhas (DLQ)
+
+```bash
+# Listar infrações inválidas
+curl http://localhost:8080/dlq
+
+# Reprocessar por ID
+curl -X POST http://localhost:8080/dlq/{id}/retry
+```
 
 ---
 
@@ -197,120 +320,3 @@ graph LR
 | **FluentAssertions** | Asserções legíveis e expressivas |
 | **Testcontainers.Kafka** | Testes de integração com Kafka real via container |
 | **NBomber** | Testes de carga e performance |
-
----
-
-## ▶️ Como Executar
-
-### Via .NET Aspire (recomendado para desenvolvimento)
-
-Sobe toda a infraestrutura (Kafka, MongoDB, Kafka UI, Mongo Express) e a API de forma orquestrada, com dashboard de observabilidade integrado:
-
-```bash
-dotnet run --project src/Supplier.Ingestion.Orchestrator.AppHost
-```
-
-A URL do **Aspire Dashboard** é exibida no terminal ao iniciar. Todos os serviços e suas URLs são acessíveis a partir do dashboard — as portas são alocadas dinamicamente pelo Aspire.
-
-### Via Docker Compose (produção / CI-CD)
-
-Sobe toda a infraestrutura (Kafka, MongoDB, Grafana, Prometheus, Loki, Tempo, OTel Collector) junto com a API:
-
-```bash
-docker-compose -f deploy/docker-compose.yml up -d
-```
-
-### Executar Testes
-
-```bash
-dotnet test
-```
-
----
-
-## 🌐 Portas dos Serviços
-
-### Via .NET Aspire (desenvolvimento)
-
-As portas são **alocadas dinamicamente**. Acesse o **Aspire Dashboard** (URL exibida no terminal ao iniciar) para visualizar os links de cada serviço.
-
-| Serviço | Observação |
-|---|---|
-| Aspire Dashboard | URL exibida no terminal (padrão: `https://localhost:15888`) |
-| API | Link disponível no Dashboard |
-| Scalar (API Docs) | `<url-da-api>/scalar/v1` |
-| Health Check | `<url-da-api>/health` |
-| Kafka UI | Link disponível no Dashboard |
-| Mongo Express | Link disponível no Dashboard |
-
-### Via Docker Compose (produção / CI-CD)
-
-| Serviço | URL |
-|---|---|
-| API | http://localhost:8080 |
-| Scalar (API Docs) | http://localhost:8080/scalar/v1 |
-| Health Check | http://localhost:8080/health |
-| Kafka UI | http://localhost:8090 |
-| Mongo Express | http://localhost:8181 |
-| Grafana | http://localhost:3000 |
-| Prometheus | http://localhost:9090 |
-| Loki | http://localhost:3100 |
-| Tempo | http://localhost:3200 |
-
----
-
-## 🕹️ Exemplos de Eventos
-
-### Fornecedor A
-
-**Evento válido**
-```json
-{
-  "ExternalCode": "TESTE-FIXO-HASH",
-  "Plate": "ABC-1234",
-  "Infringement": 7455,
-  "TotalValue": 100.00,
-  "OriginSystem": "Fornecedor_A"
-}
-```
-Destino: `target.processed.data.v1`
-
-**Evento inválido**
-```json
-{
-  "ExternalCode": "TESTE-FIXO-HASH",
-  "Plate": "ABC-1234",
-  "Infringement": 7455,
-  "TotalValue": -100.00,
-  "OriginSystem": "Fornecedor_A"
-}
-```
-Destino: `target.invalid.data.v1`
-
----
-
-### Fornecedor B
-
-**Evento válido**
-```json
-{
-  "ExternalCode": "PEDIDO-B-FINAL-900",
-  "Plate": "BBB-8888",
-  "Infringement": 6050,
-  "TotalValue": 355.50,
-  "OriginSystem": "Fornecedor_B"
-}
-```
-Destino: `target.processed.data.v1`
-
-**Evento inválido**
-```json
-{
-  "ExternalCode": "PEDIDO-B-FINAL-900",
-  "Plate": "BBB-8888",
-  "Infringement": 6050,
-  "TotalValue": -355.50,
-  "OriginSystem": "Fornecedor_B"
-}
-```
-Destino: `target.invalid.data.v1`

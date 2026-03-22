@@ -37,8 +37,6 @@ public static class MassTransitExtensions
                     r.CollectionName = "InfringementSagas";
                 });
 
-            x.AddConsumer<InvalidInfringementConsumer>();
-
             x.UsingInMemory((context, cfg) =>
             {
                 cfg.ConfigureJsonSerializerOptions(options =>
@@ -52,6 +50,8 @@ public static class MassTransitExtensions
 
             x.AddRider(rider =>
             {
+                rider.AddConsumer<InvalidInfringementConsumer>();
+
                 rider.AddProducer<string, UnifiedInfringementProcessed>(topicProcessed);
                 rider.AddProducer<string, InfringementValidationFailed>(topicInvalid);
 
@@ -122,9 +122,17 @@ public static class MassTransitExtensions
         });
     }
 
+    private static void AddSupplierProducer<TEvent>(IRiderRegistrationConfigurator rider, string topic)
+        where TEvent : class
+        => rider.AddProducer<string, TEvent>(topic);
+
     private static readonly MethodInfo ConfigureEndpointMethod =
         typeof(MassTransitExtensions)
             .GetMethod(nameof(ConfigureSupplierTopicEndpoint), BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    private static readonly MethodInfo AddProducerMethod =
+        typeof(MassTransitExtensions)
+            .GetMethod(nameof(AddSupplierProducer), BindingFlags.NonPublic | BindingFlags.Static)!;
 
     private sealed record SupplierRegistration(
         Type StateMachineType,
@@ -132,18 +140,9 @@ public static class MassTransitExtensions
         string Topic,
         string ConsumerGroup)
     {
-        private static readonly MethodInfo AddProducerMethod =
-            typeof(MassTransitExtensions).Assembly
-                .GetTypes()
-                .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Static))
-                .First(m => m.Name == "AddProducer"
-                            && m.GetGenericArguments().Length == 2
-                            && m.GetParameters().Length == 2
-                            && m.GetParameters()[0].ParameterType == typeof(IRiderRegistrationConfigurator));
-
         public void AddReplayProducer(IRiderRegistrationConfigurator rider)
             => AddProducerMethod
-                .MakeGenericMethod(typeof(string), EventType)
+                .MakeGenericMethod(EventType)
                 .Invoke(null, [rider, Topic]);
 
         public void ConfigureTopicEndpoint(IKafkaFactoryConfigurator kafka, IRiderRegistrationContext context)

@@ -127,6 +127,40 @@ services:
       echo -e 'Tópicos criados!'
       "
 
+  supplier.a.producer.api:
+    image: ${DOCKER_REGISTRY-}supplieraproducerapi
+    build:
+      context: ..
+      dockerfile: src/Supplier.A.Producer.Api/Dockerfile
+    environment:
+      - ConnectionStrings__Kafka=kafka:29092
+    ports:
+      - "8082:8080"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      init-kafka:
+        condition: service_completed_successfully
+    networks:
+      - saga-net
+
+  supplier.b.producer.api:
+    image: ${DOCKER_REGISTRY-}supplierbproducerapi
+    build:
+      context: ..
+      dockerfile: src/Supplier.B.Producer.Api/Dockerfile
+    environment:
+      - ConnectionStrings__Kafka=kafka:29092
+    ports:
+      - "8083:8080"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      init-kafka:
+        condition: service_completed_successfully
+    networks:
+      - saga-net
+
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus

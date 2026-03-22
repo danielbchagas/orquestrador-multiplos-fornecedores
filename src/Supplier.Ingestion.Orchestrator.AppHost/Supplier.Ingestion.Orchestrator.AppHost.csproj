@@ -18,6 +18,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Supplier.Ingestion.Orchestrator.Api\Supplier.Ingestion.Orchestrator.Api.csproj" />
+    <ProjectReference Include="..\Supplier.A.Producer.Api\Supplier.A.Producer.Api.csproj" />
+    <ProjectReference Include="..\Supplier.B.Producer.Api\Supplier.B.Producer.Api.csproj" />
   </ItemGroup>
 
 </Project>
