@@ -6,11 +6,21 @@ on:
 
 jobs:
   build-and-push:
-    name: Build & Push Image
+    name: Build & Push Images
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+
+    strategy:
+      matrix:
+        include:
+          - service: Supplier.Ingestion.Orchestrator.Api
+            image: supplier-ingestion-orchestrator-api
+          - service: Supplier.A.Producer.Api
+            image: supplier-a-producer-api
+          - service: Supplier.B.Producer.Api
+            image: supplier-b-producer-api
 
     steps:
       - name: Checkout
@@ -27,7 +37,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/supplier-ingestion-orchestrator-api
+          images: ghcr.io/${{ github.repository }}/${{ matrix.image }}
           tags: |
             type=sha,prefix=sha-
             type=raw,value=latest
@@ -36,7 +46,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: src/Supplier.Ingestion.Orchestrator.Api/Dockerfile
+          file: src/${{ matrix.service }}/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

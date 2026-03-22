@@ -9,13 +9,11 @@
     <File Path="deploy/files/tempo.yaml" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/Supplier.A.Producer.Api/Supplier.A.Producer.Api.csproj" Id="c3d4e5f6-a7b8-9012-cdef-123456789abc" />
+    <Project Path="src/Supplier.B.Producer.Api/Supplier.B.Producer.Api.csproj" Id="d4e5f6a7-b8c9-0123-defa-23456789abcd" />
     <Project Path="src/Supplier.Ingestion.Orchestrator.Api/Supplier.Ingestion.Orchestrator.Api.csproj" Id="12af1ce2-647a-41b3-bed4-e6be2fa2a365" />
-    <Project Path="src/Supplier.Ingestion.Orchestrator.AppHost/Supplier.Ingestion.Orchestrator.AppHost.csproj" Id="b2c3d4e5-f6a7-8901-bcde-f12345678901">
-      <Build Solution="Debug|*" Project="false" />
-    </Project>
-    <Project Path="src/Supplier.Ingestion.Orchestrator.ServiceDefaults/Supplier.Ingestion.Orchestrator.ServiceDefaults.csproj" Id="a1b2c3d4-e5f6-7890-abcd-ef1234567890">
-      <Build Solution="Debug|*" Project="false" />
-    </Project>
+    <Project Path="src/Supplier.Ingestion.Orchestrator.AppHost/Supplier.Ingestion.Orchestrator.AppHost.csproj" Id="b2c3d4e5-f6a7-8901-bcde-f12345678901" />
+    <Project Path="src/Supplier.Ingestion.Orchestrator.ServiceDefaults/Supplier.Ingestion.Orchestrator.ServiceDefaults.csproj" Id="a1b2c3d4-e5f6-7890-abcd-ef1234567890" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Supplier.Ingestion.Orchestrator.Tests/Supplier.Ingestion.Orchestrator.Tests.csproj" Id="6e30caff-13b5-43b2-a41c-797e4d076453" />
