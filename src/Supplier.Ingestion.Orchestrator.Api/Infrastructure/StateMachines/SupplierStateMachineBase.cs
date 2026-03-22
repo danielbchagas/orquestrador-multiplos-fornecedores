@@ -97,6 +97,7 @@ public abstract class SupplierStateMachineBase<TInputEvent> : MassTransitStateMa
                             ctx.CancellationToken
                         );
 
+                        ctx.Saga.ProcessedAt = DateTime.UtcNow;
                         logger.LogInformation("Mensagem enviada ao Kafka (sucesso).");
                     })
                     .Finalize(),
@@ -111,17 +112,22 @@ public abstract class SupplierStateMachineBase<TInputEvent> : MassTransitStateMa
                             new InfringementValidationFailed(
                                 ctx.Saga.ExternalId,
                                 ctx.Saga.OriginSystem,
+                                ctx.Saga.Plate,
+                                ctx.Saga.InfringementCode,
+                                ctx.Saga.Amount,
                                 ctx.Saga.ValidationErrors
                             ),
                             ctx.CancellationToken
                         );
 
+                        ctx.Saga.ProcessedAt = DateTime.UtcNow;
                         logger.LogWarning("Mensagem enviada ao Kafka (DLQ).");
                     })
                     .Finalize()
                 )
         );
 
-        SetCompletedWhenFinalized();
+        During(Final,
+            Ignore(InputReceived));
     }
 }

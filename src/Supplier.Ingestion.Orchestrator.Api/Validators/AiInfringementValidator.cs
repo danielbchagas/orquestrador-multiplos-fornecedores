@@ -10,10 +10,7 @@ public class AiInfringementValidator : IAiInfringementValidator
     private readonly ILogger<AiInfringementValidator> _logger;
     private readonly string _model;
     private readonly int _maxTokens;
-
-    private const string SystemPrompt =
-        "Você é um especialista em infrações de trânsito brasileiras. " +
-        "Analise os dados da infração e retorne APENAS um JSON válido sem markdown, sem explicação adicional.";
+    private readonly string _systemPrompt;
 
     public AiInfringementValidator(AnthropicClient client, ILogger<AiInfringementValidator> logger, IConfiguration configuration)
     {
@@ -21,6 +18,8 @@ public class AiInfringementValidator : IAiInfringementValidator
         _logger = logger;
         _model = configuration["Anthropic:Model"] ?? "claude-opus-4-6";
         _maxTokens = int.TryParse(configuration["Anthropic:MaxTokens"], out var tokens) ? tokens : 512;
+        _systemPrompt = configuration["Anthropic:SystemPrompt"]
+            ?? "Você é um especialista em infrações de trânsito brasileiras. Analise os dados da infração e retorne APENAS um JSON válido sem markdown, sem explicação adicional.";
     }
 
     public async Task<AiValidationResult> ValidateAsync(
@@ -36,7 +35,7 @@ public class AiInfringementValidator : IAiInfringementValidator
             {
                 Model = _model,
                 MaxTokens = _maxTokens,
-                System = SystemPrompt,
+                System = _systemPrompt,
                 Messages =
                 [
                     new() { Role = Role.User, Content = BuildPrompt(plate, infringementCode, amount, originSystem) }

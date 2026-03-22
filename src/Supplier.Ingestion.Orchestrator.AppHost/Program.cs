@@ -20,4 +20,14 @@ var api = builder.AddProject<Projects.Supplier_Ingestion_Orchestrator_Api>("api"
     .WaitFor(kafka)
     .WithExternalHttpEndpoints();
 
+builder.AddProject<Projects.Supplier_A_Producer_Api>("supplier-a-producer")
+    .WithReference(kafka)
+    .WaitFor(kafka)
+    .WithExternalHttpEndpoints();
+
+builder.AddProject<Projects.Supplier_B_Producer_Api>("supplier-b-producer")
+    .WithReference(kafka)
+    .WaitFor(kafka)
+    .WithExternalHttpEndpoints();
+
 builder.Build().Run();
