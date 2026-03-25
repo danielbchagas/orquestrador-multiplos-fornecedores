@@ -1,5 +1,6 @@
 using MassTransit;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
+using Supplier.Ingestion.Orchestrator.Api.Security;
 using Supplier.Ingestion.Orchestrator.Api.Validators;
 
 namespace Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
@@ -69,8 +70,8 @@ public abstract class SupplierStateMachineBase<TInputEvent> : MassTransitStateMa
                         }
 
                         logger.LogInformation(
-                            "Validação IA concluída. Suspeito: {IsSuspicious}, Confiança: {Confidence}, Análise: {Analysis}",
-                            aiResult.IsSuspicious, aiResult.Confidence, aiResult.Analysis);
+                            "Validação IA concluída. Placa: {Plate}, Suspeito: {IsSuspicious}, Confiança: {Confidence}, Análise: {Analysis}",
+                            PlateObfuscator.Mask(ctx.Saga.Plate), aiResult.IsSuspicious, aiResult.Confidence, aiResult.Analysis);
                     }
 
                     ctx.Saga.UpdatedAt = DateTime.UtcNow;
