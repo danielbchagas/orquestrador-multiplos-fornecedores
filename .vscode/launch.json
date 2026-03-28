@@ -1,0 +1,81 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "AppHost (Aspire - http)",
+      "type": "dotnet",
+      "request": "launch",
+      "projectPath": "${workspaceFolder}/src/Supplier.Ingestion.Orchestrator.AppHost/Supplier.Ingestion.Orchestrator.AppHost.csproj",
+      "launchProfile": "http",
+      "env": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    {
+      "name": "AppHost (Aspire - https)",
+      "type": "dotnet",
+      "request": "launch",
+      "projectPath": "${workspaceFolder}/src/Supplier.Ingestion.Orchestrator.AppHost/Supplier.Ingestion.Orchestrator.AppHost.csproj",
+      "launchProfile": "https",
+      "env": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    {
+      "name": "Orchestrator Api (http)",
+      "type": "dotnet",
+      "request": "launch",
+      "projectPath": "${workspaceFolder}/src/Supplier.Ingestion.Orchestrator.Api/Supplier.Ingestion.Orchestrator.Api.csproj",
+      "launchProfile": "http",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    {
+      "name": "Orchestrator Api (https)",
+      "type": "dotnet",
+      "request": "launch",
+      "projectPath": "${workspaceFolder}/src/Supplier.Ingestion.Orchestrator.Api/Supplier.Ingestion.Orchestrator.Api.csproj",
+      "launchProfile": "https",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    {
+      "name": "Supplier A Producer (http)",
+      "type": "dotnet",
+      "request": "launch",
+      "projectPath": "${workspaceFolder}/src/Supplier.A.Producer.Api/Supplier.A.Producer.Api.csproj",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    {
+      "name": "Supplier B Producer (http)",
+      "type": "dotnet",
+      "request": "launch",
+      "projectPath": "${workspaceFolder}/src/Supplier.B.Producer.Api/Supplier.B.Producer.Api.csproj",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    {
+      "name": "Attach to Process",
+      "type": "dotnet",
+      "request": "attach"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "All APIs (sem Aspire)",
+      "configurations": [
+        "Orchestrator Api (http)",
+        "Supplier A Producer (http)",
+        "Supplier B Producer (http)"
+      ],
+      "stopAll": true
+    }
+  ]
+}
