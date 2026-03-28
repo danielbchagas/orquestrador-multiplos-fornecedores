@@ -1,8 +1,11 @@
 using Confluent.Kafka;
+using Microsoft.AspNetCore.RateLimiting;
+using Supplier.A.Producer.Api.Security;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,10 +25,53 @@ builder.Services.AddSingleton<IProducer<string, string>>(_ =>
 
 builder.Services.AddOpenApi();
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("default", cfg =>
+    {
+        cfg.PermitLimit = 60;
+        cfg.Window = TimeSpan.FromMinutes(1);
+        cfg.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        cfg.QueueLimit = 0;
+    });
+
+    options.AddFixedWindowLimiter("strict", cfg =>
+    {
+        cfg.PermitLimit = 10;
+        cfg.Window = TimeSpan.FromMinutes(1);
+        cfg.QueueLimit = 0;
+    });
+
+    options.OnRejected = async (context, ct) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        await context.HttpContext.Response.WriteAsync("Rate limit excedido.", ct);
+    };
+});
+
 var app = builder.Build();
 
-app.MapOpenApi();
-app.MapScalarApiReference();
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+}
+
+app.UseRateLimiter();
+
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.Append("X-Frame-Options", "DENY");
+    context.Response.Headers.Append("Referrer-Policy", "no-referrer");
+    context.Response.Headers.Append("Permissions-Policy", "geolocation=(), microphone=()");
+
+    var path = context.Request.Path;
+    if (!path.StartsWithSegments("/scalar") && !path.StartsWithSegments("/openapi"))
+        context.Response.Headers.Append("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
+
+    await next();
+});
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "Supplier A Producer", topic = Topic }))
     .WithName("Health")
@@ -48,18 +94,21 @@ app.MapPost("/infringements", async (InfringementRequest request, IProducer<stri
     var correlationId = GenerateCorrelationId(request.ExternalCode);
     var envelope = BuildEnvelope(correlationId, request.ExternalCode, request.Plate, request.Infringement, request.TotalValue);
     var json = JsonSerializer.Serialize(envelope, JsonOptions.Default);
+    var signingKey = builder.Configuration["Kafka:SigningKey"] ?? string.Empty;
 
     await producer.ProduceAsync(Topic, new Message<string, string>
     {
         Key = correlationId.ToString(),
-        Value = json
+        Value = json,
+        Headers = new Headers { { "x-signature", Encoding.UTF8.GetBytes(MessageSigner.Sign(json, signingKey)) } }
     });
 
     return Results.Accepted($"/infringements", new { correlationId, status = "published", topic = Topic });
 })
 .WithName("PublishInfringement")
 .WithSummary("Publica uma infração do Fornecedor A")
-.WithDescription("Publica uma mensagem de infração de veículo no tópico Kafka do Fornecedor A para ser processada pelo orquestrador.");
+.WithDescription("Publica uma mensagem de infração de veículo no tópico Kafka do Fornecedor A para ser processada pelo orquestrador.")
+.RequireRateLimiting("default");
 
 app.MapPost("/infringements/simulate", async (IProducer<string, string> producer, int count = 1) =>
 {
@@ -78,11 +127,13 @@ app.MapPost("/infringements/simulate", async (IProducer<string, string> producer
         var correlationId = GenerateCorrelationId(externalCode);
         var envelope = BuildEnvelope(correlationId, externalCode, plate, infringement, totalValue);
         var json = JsonSerializer.Serialize(envelope, JsonOptions.Default);
+        var signingKey = builder.Configuration["Kafka:SigningKey"] ?? string.Empty;
 
         await producer.ProduceAsync(Topic, new Message<string, string>
         {
             Key = correlationId.ToString(),
-            Value = json
+            Value = json,
+            Headers = new Headers { { "x-signature", Encoding.UTF8.GetBytes(MessageSigner.Sign(json, signingKey)) } }
         });
 
         published.Add(new { correlationId, externalCode, plate, infringement, totalValue });
@@ -92,7 +143,8 @@ app.MapPost("/infringements/simulate", async (IProducer<string, string> producer
 })
 .WithName("SimulateInfringement")
 .WithSummary("Simula infrações aleatórias do Fornecedor A")
-.WithDescription("Gera e publica mensagens de infração com dados aleatórios válidos. Use o parâmetro `count` para publicar múltiplas mensagens de uma vez (máx. 100).");
+.WithDescription("Gera e publica mensagens de infração com dados aleatórios válidos. Use o parâmetro `count` para publicar múltiplas mensagens de uma vez (máx. 100).")
+.RequireRateLimiting("strict");
 
 app.Run();
 

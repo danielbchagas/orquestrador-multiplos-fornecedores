@@ -5,6 +5,7 @@ using MassTransit;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Consumers;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
 using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
+using Supplier.Ingestion.Orchestrator.Api.Security;
 
 namespace Supplier.Ingestion.Orchestrator.Api.Extensions;
 
@@ -19,10 +20,11 @@ public static class MassTransitExtensions
         // Descobre todas as state machines concretas que herdam de SupplierStateMachineBase<TInputEvent>
         var supplierRegistrations = DiscoverSupplierRegistrations(configuration);
 
-        services.AddHostedService(_ => new KafkaOutputTopicInitializer(
+        var inputTopics = supplierRegistrations.Select(r => r.Topic).ToArray();
+
+        services.AddHostedService(_ => new KafkaTopicInitializer(
             configuration.GetConnectionString("Kafka")!,
-            topicProcessed,
-            topicInvalid));
+            [.. inputTopics, topicProcessed, topicInvalid]));
 
         services.AddMassTransit(x =>
         {
@@ -117,6 +119,7 @@ public static class MassTransitExtensions
             e.ConcurrentMessageLimit = 10;
             e.UseMessageRetry(r => r.Exponential(3, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(2)));
             e.UseRawJsonSerializer();
+            e.UseConsumeFilter(typeof(KafkaSignatureVerificationFilter<>), context);
             e.CreateIfMissing(t => { t.NumPartitions = 2; t.ReplicationFactor = 1; });
             e.StateMachineSaga(context.GetRequiredService<TStateMachine>(), context);
         });
@@ -152,7 +155,7 @@ public static class MassTransitExtensions
     }
 }
 
-file sealed class KafkaOutputTopicInitializer(string bootstrapServers, params string[] topics) : IHostedService
+file sealed class KafkaTopicInitializer(string bootstrapServers, params string[] topics) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {

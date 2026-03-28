@@ -1,3 +1,4 @@
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace Supplier.Ingestion.Orchestrator.Api.Infrastructure.Persistence;
@@ -5,8 +6,10 @@ namespace Supplier.Ingestion.Orchestrator.Api.Infrastructure.Persistence;
 public class InvalidInfringementDocument
 {
     [BsonId]
+    [BsonGuidRepresentation(GuidRepresentation.Standard)]
     public Guid Id { get; set; } = Guid.NewGuid();
 
+    [BsonGuidRepresentation(GuidRepresentation.Standard)]
     public Guid CorrelationId { get; set; }
     public string OriginId { get; set; } = string.Empty;
     public string OriginSystem { get; set; } = string.Empty;
