@@ -38,7 +38,7 @@ O estado das sagas é persistido no MongoDB. A validação combina regras de neg
 │   │   │   ├── Repositories/                     # Repositório de infrações inválidas
 │   │   │   └── StateMachines/                    # State Machines das sagas por fornecedor
 │   │   └── Validators/                           # Validação de infrações (regras de negócio + IA)
-│   ├── Supplier.Ingestion.Orchestrator.AppHost/  # Orquestrador .NET Aspire (desenvolvimento local)
+│   ├── Supplier.Ingestion.Orchestrator.AppHost/  # Orquestrador .NET Aspire (APIs + Kafka + MongoDB + Grafana stack)
 │   └── Supplier.Ingestion.Orchestrator.ServiceDefaults/ # Configurações compartilhadas (OTel, health, resilience)
 ├── tests/
 │   └── Supplier.Ingestion.Orchestrator.Tests/
@@ -219,7 +219,7 @@ Suba toda a infraestrutura e as três APIs:
 dotnet run --project src/Supplier.Ingestion.Orchestrator.AppHost
 ```
 
-A URL do **Aspire Dashboard** é exibida no terminal ao iniciar. Os três serviços e seus links diretos para o Scalar ficam disponíveis no dashboard — as portas são alocadas dinamicamente.
+A URL do **Aspire Dashboard** é exibida no terminal ao iniciar. Todos os serviços (APIs, Kafka, MongoDB, Grafana e seu stack de observabilidade) são iniciados automaticamente — as portas são alocadas dinamicamente e ficam disponíveis no dashboard.
 
 ### Via Docker Compose (produção / CI-CD)
 
@@ -252,6 +252,13 @@ As portas são **alocadas dinamicamente**. Acesse o **Aspire Dashboard** (URL ex
 | Supplier B Producer | `http://localhost:5002` | `http://localhost:5002/scalar/v1` |
 | Kafka UI | dinâmica | — |
 | Mongo Express | dinâmica | — |
+| Grafana | dinâmica | — |
+| Prometheus | dinâmica | — |
+| Loki | dinâmica | — |
+| Tempo | dinâmica | — |
+| OTel Collector (gRPC) | dinâmica | — |
+
+> **Observabilidade via Aspire**: o stack completo de Grafana (Loki, Tempo, Prometheus, OTel Collector) é iniciado automaticamente junto com os demais serviços. As URLs dinâmicas ficam disponíveis no Aspire Dashboard. A telemetria dos serviços é enviada ao OTel Collector, que alimenta o Grafana. O Aspire Dashboard permanece ativo para gerenciamento e inspeção dos serviços.
 
 ### Via Docker Compose (produção / CI-CD)
 
@@ -294,7 +301,8 @@ curl -X POST http://localhost:5001/infringements \
 
 | Interface | URL | O que ver |
 |---|---|---|
-| Aspire Dashboard | `https://localhost:15888` | Traces, logs, métricas |
+| Aspire Dashboard | `https://localhost:15888` | Status dos serviços, links |
+| Grafana | dinâmica (dashboard) | Métricas, traces, logs unificados |
 | Kafka UI | dinâmica (dashboard) | Mensagens nos tópicos |
 | Mongo Express | dinâmica (dashboard) | Estado das sagas |
 

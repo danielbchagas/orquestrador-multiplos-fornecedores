@@ -1,6 +1,8 @@
 using Anthropic;
 using Anthropic.Models.Messages;
+using Supplier.Ingestion.Orchestrator.Api.Security;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Supplier.Ingestion.Orchestrator.Api.Validators;
 
@@ -43,7 +45,7 @@ public class AiInfringementValidator : IAiInfringementValidator
             };
 
             _logger.LogInformation("Chamando IA para validação de infração. Placa: {Plate}, Código: {Code}",
-                plate, infringementCode);
+                PlateObfuscator.Mask(plate), infringementCode);
 
             var response = await _client.Messages.Create(parameters, cancellationToken);
             var content = ExtractTextContent(response);
@@ -54,18 +56,33 @@ public class AiInfringementValidator : IAiInfringementValidator
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Validação IA falhou, assumindo válido. Placa: {Plate}", plate);
-            return new AiValidationResult(true, false, "AI validation unavailable", 0.5);
+            _logger.LogWarning(ex, "Validação IA falhou. Placa: {Plate}", PlateObfuscator.Mask(plate));
+            return new AiValidationResult(
+                IsValid: false,
+                IsSuspicious: true,
+                Analysis: "Validação IA indisponível — infração retida para revisão manual.",
+                Confidence: 0.0);
         }
+    }
+
+    private static string SanitizeForPrompt(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return string.Empty;
+
+        var cleaned = Regex.Replace(input, @"[\r\n\t]", " ");
+        cleaned = Regex.Replace(cleaned, @"(ignore|esquece?a?|desconsidere?|system\s*prompt|</?[a-z]+>)", " ", RegexOptions.IgnoreCase);
+
+        return cleaned.Length > 50 ? cleaned[..50] : cleaned;
     }
 
     public static string BuildPrompt(string plate, int infringementCode, decimal amount, string originSystem) =>
         $$"""
         Analise esta infração de trânsito brasileira:
-        - Placa: {{plate}}
+        - Placa: {{SanitizeForPrompt(plate)}}
         - Código CTB: {{infringementCode}}
         - Valor: R$ {{amount:F2}}
-        - Sistema de origem: {{originSystem}}
+        - Sistema de origem: {{SanitizeForPrompt(originSystem)}}
 
         Verifique:
         1. Se a placa está no formato válido (padrão antigo AAA-9999 ou Mercosul AAA9A99)
