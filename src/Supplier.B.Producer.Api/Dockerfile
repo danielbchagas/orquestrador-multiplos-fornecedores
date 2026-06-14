@@ -6,6 +6,7 @@ EXPOSE 8080
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+COPY ["Directory.Packages.props", "global.json", "./"]
 COPY ["src/Supplier.B.Producer.Api/Supplier.B.Producer.Api.csproj", "src/Supplier.B.Producer.Api/"]
 RUN dotnet restore "./src/Supplier.B.Producer.Api/Supplier.B.Producer.Api.csproj"
 COPY . .
