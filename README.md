@@ -1,5 +1,10 @@
 # Orquestrador de Múltiplos Fornecedores
 
+[![CI](https://github.com/danielbchagas/orquestrador-multiplos-fornecedores/actions/workflows/ci.yml/badge.svg)](https://github.com/danielbchagas/orquestrador-multiplos-fornecedores/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
+[![Architecture](https://img.shields.io/badge/pattern-Saga%20%2F%20Event--Driven-039be5)](#-fluxo-de-dados)
+
 ## 📋 Introdução
 
 Este projeto implementa um sistema completo de ingestão e orquestração de dados de múltiplos fornecedores. O ecossistema é composto por três APIs:

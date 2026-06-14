@@ -14,5 +14,9 @@ public static class MessageSigner
     }
 
     public static bool Verify(string payload, string signature, string secret)
-        => Sign(payload, secret) == signature;
+    {
+        var expected = Encoding.UTF8.GetBytes(Sign(payload, secret));
+        var provided = Encoding.UTF8.GetBytes(signature ?? string.Empty);
+        return CryptographicOperations.FixedTimeEquals(expected, provided);
+    }
 }
