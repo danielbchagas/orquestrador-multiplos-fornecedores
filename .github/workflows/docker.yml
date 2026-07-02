@@ -17,6 +17,8 @@ jobs:
         include:
           - service: Supplier.Ingestion.Orchestrator.Api
             image: supplier-ingestion-orchestrator-api
+          - service: Supplier.Ingestion.Orchestrator.WolverineApi
+            image: supplier-ingestion-orchestrator-wolverine-api
           - service: Supplier.A.Producer.Api
             image: supplier-a-producer-api
           - service: Supplier.B.Producer.Api

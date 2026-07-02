@@ -7,11 +7,12 @@
 
 ## 📋 Introdução
 
-Este projeto implementa um sistema completo de ingestão e orquestração de dados de múltiplos fornecedores. O ecossistema é composto por três APIs:
+Este projeto implementa um sistema completo de ingestão e orquestração de dados de múltiplos fornecedores. O ecossistema é composto por quatro APIs:
 
 - **Supplier A Producer** — simula o sistema legado do Fornecedor A, publicando infrações no tópico Kafka `source.supplier-a.v1`
 - **Supplier B Producer** — simula o sistema legado do Fornecedor B, publicando infrações no tópico Kafka `source.supplier-b.v1`
-- **Orchestrator API** — consome os tópicos de entrada, valida os dados via State Machines (Saga Pattern), e publica o resultado nos tópicos de saída
+- **Orchestrator API (MassTransit)** — consome os tópicos de entrada, valida os dados via State Machines (Saga Pattern), e publica o resultado nos tópicos de saída
+- **Orchestrator API (Wolverine)** — implementação alternativa do mesmo orquestrador usando [Wolverine](https://wolverinefx.net/), com handlers diretos no lugar de sagas — mesmos tópicos, contratos e endpoints, útil para comparar as duas bibliotecas lado a lado (ver [Comparativo MassTransit × Wolverine](#-orquestrador-alternativo-com-wolverine))
 
 O estado das sagas é persistido no MongoDB. A validação combina regras de negócio com análise inteligente via Claude API (Anthropic).
 
@@ -43,6 +44,16 @@ O estado das sagas é persistido no MongoDB. A validação combina regras de neg
 │   │   │   ├── Repositories/                     # Repositório de infrações inválidas
 │   │   │   └── StateMachines/                    # State Machines das sagas por fornecedor
 │   │   └── Validators/                           # Validação de infrações (regras de negócio + IA)
+│   ├── Supplier.Ingestion.Orchestrator.WolverineApi/
+│   │   ├── Extensions/                           # Configuração modular (Wolverine + Kafka, Health Checks)
+│   │   ├── Infrastructure/
+│   │   │   ├── Events/                           # Eventos de integração (mesmos contratos da versão MassTransit)
+│   │   │   ├── Handlers/                         # Handlers Wolverine (substituem as State Machines)
+│   │   │   ├── HealthChecks/                     # Health checks (MongoDB, Kafka)
+│   │   │   ├── Persistence/                      # Documentos MongoDB (estado de processamento, DLQ)
+│   │   │   └── Repositories/                     # Repositórios (estado e infrações inválidas)
+│   │   ├── Security/                             # HMAC, ofuscação de placas, middleware Wolverine de assinatura
+│   │   └── Validators/                           # Validação de infrações (regras de negócio + IA)
 │   ├── Supplier.Ingestion.Orchestrator.AppHost/  # Orquestrador .NET Aspire (APIs + Kafka + MongoDB + Grafana stack)
 │   └── Supplier.Ingestion.Orchestrator.ServiceDefaults/ # Configurações compartilhadas (OTel, health, resilience)
 ├── tests/
@@ -65,6 +76,7 @@ O estado das sagas é persistido no MongoDB. A validação combina regras de neg
 |---|---|
 | **.NET 10** | Plataforma principal |
 | **MassTransit** | Orquestração de sagas (Saga Pattern) e Kafka riders |
+| **Wolverine** | Implementação alternativa do orquestrador (handlers + transporte Kafka nativo) |
 | **Apache Kafka** | Broker de mensageria (entrada e saída de eventos) |
 | **MongoDB** | Persistência do estado das sagas |
 | **Anthropic Claude API** | Validação inteligente de infrações via IA |
@@ -145,6 +157,46 @@ Scenario: Infração válida do Fornecedor A é finalizada com sucesso
 | `HealthCheckExtensions` | Health checks de MongoDB e Kafka |
 | `ApplicationExtensions` | Middleware pipeline (OpenAPI, Scalar, health endpoints) |
 | `ServiceDefaults` | OTel (métricas, traces, logs), service discovery e resilience via Aspire |
+
+---
+
+## 🐺 Orquestrador Alternativo com Wolverine
+
+O projeto `Supplier.Ingestion.Orchestrator.WolverineApi` é uma reimplementação completa do orquestrador usando **Wolverine** no lugar do MassTransit. Os dois orquestradores compartilham os mesmos tópicos Kafka, contratos de mensagem (JSON camelCase), verificação de assinatura HMAC e endpoints HTTP (`/dlq`, `/dlq/{id}/retry`), permitindo comparação direta entre as bibliotecas.
+
+### Mapeamento entre as implementações
+
+| Conceito | MassTransit (`Orchestrator.Api`) | Wolverine (`Orchestrator.WolverineApi`) |
+|---|---|---|
+| Processamento de entrada | `SupplierStateMachineBase` (Saga Pattern) | `SupplierInputProcessor` + handlers diretos |
+| Consumo da DLQ | `InvalidInfringementConsumer` | `InfringementValidationFailedHandler` |
+| Interop com producers externos | `UseRawJsonSerializer()` | `DefaultIncomingMessage<T>()` |
+| Verificação de assinatura HMAC | `KafkaSignatureVerificationFilter` (consume filter) | `KafkaSignatureVerificationMiddleware` (middleware por tipo de mensagem) |
+| Retry de consumo | `UseMessageRetry(r => r.Exponential(3, ...))` | `OnException<Exception>().RetryWithCooldown(...)` |
+| Estado / idempotência | Saga persistida no MongoDB (`InfringementSagas`) | Documento de estado com `_id` determinístico (`WolverineInfringementStates`) — inserção duplicada é ignorada |
+| Criação de tópicos | `KafkaTopicInitializer` (hosted service) | `AutoProvision()` + `Specification(...)` |
+
+> **Nota**: o fluxo de negócio inicia e finaliza com uma única mensagem, então a versão Wolverine usa handlers diretos (idiomático na biblioteca) em vez de sagas. A idempotência da saga (`InsertOnInitial` + `Ignore` no estado final) é reproduzida pela inserção do estado no MongoDB usando o `CorrelationId` determinístico (UUID v5) como `_id`.
+
+### Executando lado a lado
+
+O AppHost do Aspire sobe os **dois orquestradores** (`api` e `api-wolverine`). Como cada um usa consumer groups próprios (`wolverine-group-a`, `wolverine-group-b`, `wolverine-dlq-group`) e coleções MongoDB próprias, cada mensagem publicada pelos fornecedores é processada pelos dois de forma independente — ideal para comparar logs, traces e comportamento.
+
+Para configurar a chave da Anthropic na versão Wolverine:
+
+```bash
+dotnet user-secrets set "Anthropic:ApiKey" "sk-ant-..." --project src/Supplier.Ingestion.Orchestrator.WolverineApi
+```
+
+Comandos de diagnóstico do Wolverine (JasperFx):
+
+```bash
+# Pré-visualiza o código gerado para os handlers (útil para entender o pipeline)
+dotnet run --project src/Supplier.Ingestion.Orchestrator.WolverineApi -- codegen preview
+
+# Descreve toda a configuração da aplicação (endpoints, assinaturas, serializers)
+dotnet run --project src/Supplier.Ingestion.Orchestrator.WolverineApi -- describe
+```
 
 ---
 

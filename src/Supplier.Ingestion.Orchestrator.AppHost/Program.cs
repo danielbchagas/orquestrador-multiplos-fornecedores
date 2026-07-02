@@ -59,6 +59,18 @@ var api = builder.AddProject<Projects.Supplier_Ingestion_Orchestrator_Api>("api"
     .WithEnvironment("OTEL_EXPORTER_OTLP_ENDPOINT", otelCollector.GetEndpoint("grpc"))
     .WithExternalHttpEndpoints();
 
+// Orquestrador alternativo usando Wolverine — mesmos tópicos/contratos, consumer groups
+// e coleções Mongo próprios. Com os dois orquestradores ativos, cada mensagem é processada
+// pelos dois de forma independente (consumer groups distintos), útil para comparação lado a lado.
+builder.AddProject<Projects.Supplier_Ingestion_Orchestrator_WolverineApi>("api-wolverine")
+    .WithReference(mongoDb)
+    .WithReference(kafka)
+    .WaitFor(mongoDb)
+    .WaitFor(kafka)
+    .WaitFor(otelCollector)
+    .WithEnvironment("OTEL_EXPORTER_OTLP_ENDPOINT", otelCollector.GetEndpoint("grpc"))
+    .WithExternalHttpEndpoints();
+
 builder.AddProject<Projects.Supplier_A_Producer_Api>("supplier-a-producer")
     .WithReference(kafka)
     .WaitFor(kafka)
