@@ -162,7 +162,7 @@ file sealed class KafkaTopicInitializer(string bootstrapServers, params string[]
         using var admin = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = bootstrapServers }).Build();
         var specs = topics.Select(t => new TopicSpecification { Name = t, NumPartitions = 2, ReplicationFactor = 1 }).ToList();
         try { await admin.CreateTopicsAsync(specs); }
-        catch (CreateTopicsException ex) when (ex.Results.All(r => r.Error.Code == ErrorCode.TopicAlreadyExists)) { }
+        catch (CreateTopicsException ex) when (ex.Results.Where(r => r.Error.IsError).All(r => r.Error.Code == ErrorCode.TopicAlreadyExists)) { }
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
