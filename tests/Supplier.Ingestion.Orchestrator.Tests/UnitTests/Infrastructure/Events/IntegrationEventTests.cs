@@ -1,5 +1,5 @@
 using FluentAssertions;
-using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
+using Supplier.Ingestion.Orchestrator.MasstransitApi.Infrastructure.Events;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.UnitTests.Infrastructure.Events;
 

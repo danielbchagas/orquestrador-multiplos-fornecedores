@@ -20,8 +20,8 @@ Este documento descreve o plano de implementação para corrigir as vulnerabilid
 
 **Vulnerabilidade:** A01 (Broken Access Control) + A07 (Authentication Failures)
 **Arquivos afetados:**
-- `src/Supplier.Ingestion.Orchestrator.Api/Program.cs`
-- `src/Supplier.Ingestion.Orchestrator.Api/Extensions/ApplicationExtensions.cs`
+- `src/Supplier.Ingestion.Orchestrator.MasstransitApi/Program.cs`
+- `src/Supplier.Ingestion.Orchestrator.MasstransitApi/Extensions/ApplicationExtensions.cs`
 - `src/Supplier.A.Producer.Api/Program.cs`
 - `src/Supplier.B.Producer.Api/Program.cs`
 - `deploy/docker-compose.yml`
@@ -32,7 +32,7 @@ Este documento descreve o plano de implementação para corrigir as vulnerabilid
 1. Criar `ApiKeyAuthenticationHandler` — middleware que lê o header `X-Api-Key` e valida contra um conjunto de chaves configuradas.
 
    ```csharp
-   // src/Supplier.Ingestion.Orchestrator.Api/Security/ApiKeyAuthenticationHandler.cs
+   // src/Supplier.Ingestion.Orchestrator.MasstransitApi/Security/ApiKeyAuthenticationHandler.cs
    public class ApiKeyAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
    {
        private const string ApiKeyHeaderName = "X-Api-Key";
@@ -163,7 +163,7 @@ As APIs de negócio (`8080`, `8081`, `8082`, `8083`) mantêm bind público, pois
 ### F2.1 — Rate Limiting nos endpoints HTTP
 **Vulnerabilidade:** A04 (Insecure Design)
 **Arquivos afetados:**
-- `src/Supplier.Ingestion.Orchestrator.Api/Program.cs`
+- `src/Supplier.Ingestion.Orchestrator.MasstransitApi/Program.cs`
 - `src/Supplier.A.Producer.Api/Program.cs`
 - `src/Supplier.B.Producer.Api/Program.cs`
 
@@ -216,7 +216,7 @@ app.MapPost("/dlq/{id:guid}/retry", ...).RequireRateLimiting("strict");
 
 ### F2.2 — Sanitização contra Prompt Injection
 **Vulnerabilidade:** A03 (Injection)
-**Arquivo afetado:** `src/Supplier.Ingestion.Orchestrator.Api/Validators/AiInfringementValidator.cs`
+**Arquivo afetado:** `src/Supplier.Ingestion.Orchestrator.MasstransitApi/Validators/AiInfringementValidator.cs`
 
 **Implementação:**
 
@@ -260,7 +260,7 @@ public static string BuildPrompt(string plate, int infringementCode, decimal amo
 
 ### F2.3 — Corrigir race condition no retry da DLQ
 **Vulnerabilidade:** A04 (Insecure Design)
-**Arquivo afetado:** `src/Supplier.Ingestion.Orchestrator.Api/Program.cs` (linhas 44-65)
+**Arquivo afetado:** `src/Supplier.Ingestion.Orchestrator.MasstransitApi/Program.cs` (linhas 44-65)
 
 **Implementação:**
 
@@ -296,7 +296,7 @@ app.MapPost("/dlq/{id:guid}/retry", async (...) =>
 
 ### F2.4 — Falha segura no fallback da validação IA
 **Vulnerabilidade:** A04 (Insecure Design)
-**Arquivo afetado:** `src/Supplier.Ingestion.Orchestrator.Api/Validators/AiInfringementValidator.cs` (linha 58)
+**Arquivo afetado:** `src/Supplier.Ingestion.Orchestrator.MasstransitApi/Validators/AiInfringementValidator.cs` (linha 58)
 
 **Implementação:**
 
@@ -325,7 +325,7 @@ catch (Exception ex)
 
 ### F2.5 — Adicionar Security Headers HTTP
 **Vulnerabilidade:** A05 (Security Misconfiguration)
-**Arquivo afetado:** `src/Supplier.Ingestion.Orchestrator.Api/Extensions/ApplicationExtensions.cs`
+**Arquivo afetado:** `src/Supplier.Ingestion.Orchestrator.MasstransitApi/Extensions/ApplicationExtensions.cs`
 
 **Implementação:**
 
@@ -350,15 +350,15 @@ Aplicar também nos Producer APIs.
 ### F2.6 — Mascarar PII (placas) nos logs
 **Vulnerabilidade:** A09 (Security Logging Failures)
 **Arquivos afetados:**
-- `src/Supplier.Ingestion.Orchestrator.Api/Validators/AiInfringementValidator.cs`
-- `src/Supplier.Ingestion.Orchestrator.Api/Infrastructure/StateMachines/SupplierStateMachineBase.cs`
+- `src/Supplier.Ingestion.Orchestrator.MasstransitApi/Validators/AiInfringementValidator.cs`
+- `src/Supplier.Ingestion.Orchestrator.MasstransitApi/Infrastructure/StateMachines/SupplierStateMachineBase.cs`
 
 **Implementação:**
 
 Criar utilitário de mascaramento:
 
 ```csharp
-// src/Supplier.Ingestion.Orchestrator.Api/Security/PlateObfuscator.cs
+// src/Supplier.Ingestion.Orchestrator.MasstransitApi/Security/PlateObfuscator.cs
 public static class PlateObfuscator
 {
     /// Retorna "ABC-***" ou "ABC9***" para logs
@@ -385,14 +385,14 @@ _logger.LogInformation("Chamando IA para validação. Placa: {Plate}", PlateObfu
 
 ### F2.7 — Adicionar audit trail de segurança
 **Vulnerabilidade:** A09 (Security Logging Failures)
-**Arquivo afetado:** `src/Supplier.Ingestion.Orchestrator.Api/Program.cs`
+**Arquivo afetado:** `src/Supplier.Ingestion.Orchestrator.MasstransitApi/Program.cs`
 
 **Implementação:**
 
 Criar middleware de auditoria:
 
 ```csharp
-// src/Supplier.Ingestion.Orchestrator.Api/Security/AuditMiddleware.cs
+// src/Supplier.Ingestion.Orchestrator.MasstransitApi/Security/AuditMiddleware.cs
 public class AuditMiddleware(RequestDelegate next, ILogger<AuditMiddleware> logger)
 {
     public async Task InvokeAsync(HttpContext context)
@@ -556,7 +556,7 @@ Documentar o processo de atualização de versões (quem revisa, com que frequê
 **Arquivos afetados:**
 - `src/Supplier.A.Producer.Api/Program.cs`
 - `src/Supplier.B.Producer.Api/Program.cs`
-- `src/Supplier.Ingestion.Orchestrator.Api/Infrastructure/StateMachines/SupplierStateMachineBase.cs`
+- `src/Supplier.Ingestion.Orchestrator.MasstransitApi/Infrastructure/StateMachines/SupplierStateMachineBase.cs`
 
 **Implementação:**
 

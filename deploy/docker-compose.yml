@@ -3,7 +3,7 @@ services:
     image: ${DOCKER_REGISTRY-}supplieringestionorchestratorapi
     build:
       context: ..
-      dockerfile: src/Supplier.Ingestion.Orchestrator.Api/Dockerfile
+      dockerfile: src/Supplier.Ingestion.Orchestrator.MasstransitApi/Dockerfile
     environment:
       - ConnectionStrings__Kafka=kafka:29092
       - ConnectionStrings__MongoDb=mongodb://${MONGO_APP_USERNAME}:${MONGO_APP_PASSWORD}@mongo:27017/IngestionRefineryDb

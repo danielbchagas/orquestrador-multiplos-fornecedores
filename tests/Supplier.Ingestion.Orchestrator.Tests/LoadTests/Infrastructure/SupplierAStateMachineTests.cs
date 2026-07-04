@@ -1,6 +1,6 @@
 using AutoFixture;
-using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
-using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
+using Supplier.Ingestion.Orchestrator.MasstransitApi.Infrastructure.Events;
+using Supplier.Ingestion.Orchestrator.MasstransitApi.Infrastructure.StateMachines;
 using Xunit.Abstractions;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.LoadTests.Infrastructure;

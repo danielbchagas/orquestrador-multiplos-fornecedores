@@ -1,6 +1,6 @@
 using FluentAssertions;
 using Reqnroll;
-using Supplier.Ingestion.Orchestrator.Api.Validators;
+using Supplier.Ingestion.Orchestrator.MasstransitApi.Validators;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.FunctionalTests.StepDefinitions;
 

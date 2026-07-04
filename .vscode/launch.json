@@ -27,7 +27,7 @@
       "name": "Orchestrator Api (http)",
       "type": "dotnet",
       "request": "launch",
-      "projectPath": "${workspaceFolder}/src/Supplier.Ingestion.Orchestrator.Api/Supplier.Ingestion.Orchestrator.Api.csproj",
+      "projectPath": "${workspaceFolder}/src/Supplier.Ingestion.Orchestrator.MasstransitApi/Supplier.Ingestion.Orchestrator.MasstransitApi.csproj",
       "launchProfile": "http",
       "env": {
         "ASPNETCORE_ENVIRONMENT": "Development"
@@ -37,7 +37,7 @@
       "name": "Orchestrator Api (https)",
       "type": "dotnet",
       "request": "launch",
-      "projectPath": "${workspaceFolder}/src/Supplier.Ingestion.Orchestrator.Api/Supplier.Ingestion.Orchestrator.Api.csproj",
+      "projectPath": "${workspaceFolder}/src/Supplier.Ingestion.Orchestrator.MasstransitApi/Supplier.Ingestion.Orchestrator.MasstransitApi.csproj",
       "launchProfile": "https",
       "env": {
         "ASPNETCORE_ENVIRONMENT": "Development"

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Moq;
-using Supplier.Ingestion.Orchestrator.Api.Infrastructure.HealthChecks;
+using Supplier.Ingestion.Orchestrator.MasstransitApi.Infrastructure.HealthChecks;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.UnitTests.Infrastructure.HealthChecks;
 

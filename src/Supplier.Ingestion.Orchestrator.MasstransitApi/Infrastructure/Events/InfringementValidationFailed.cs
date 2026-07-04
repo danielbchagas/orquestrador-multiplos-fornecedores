@@ -1,0 +1,30 @@
+﻿namespace Supplier.Ingestion.Orchestrator.MasstransitApi.Infrastructure.Events;
+
+public record InfringementValidationFailed : IntegrationEvent
+{
+    public InfringementValidationFailed(
+        string originId,
+        string originSystem,
+        string plate,
+        int infringementCode,
+        decimal amount,
+        string failureReason)
+        : base(originId)
+    {
+        OriginId = originId;
+        OriginSystem = originSystem;
+        Plate = plate;
+        InfringementCode = infringementCode;
+        Amount = amount;
+        FailureReason = failureReason;
+        FailedAt = DateTime.UtcNow;
+    }
+
+    public string OriginId { get; init; }
+    public string OriginSystem { get; init; }
+    public string Plate { get; init; }
+    public int InfringementCode { get; init; }
+    public decimal Amount { get; init; }
+    public string FailureReason { get; init; }
+    public DateTime FailedAt { get; init; }
+}

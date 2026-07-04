@@ -4,9 +4,9 @@ using MassTransit.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
-using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
-using Supplier.Ingestion.Orchestrator.Api.Validators;
+using Supplier.Ingestion.Orchestrator.MasstransitApi.Infrastructure.Events;
+using Supplier.Ingestion.Orchestrator.MasstransitApi.Infrastructure.StateMachines;
+using Supplier.Ingestion.Orchestrator.MasstransitApi.Validators;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.UnitTests.Infrastructure.StateMachines;
 

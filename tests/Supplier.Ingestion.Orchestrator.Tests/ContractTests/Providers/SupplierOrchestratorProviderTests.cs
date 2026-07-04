@@ -1,5 +1,5 @@
 using FluentAssertions;
-using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
+using Supplier.Ingestion.Orchestrator.MasstransitApi.Infrastructure.Events;
 using System.Text.Json;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.ContractTests.Providers;

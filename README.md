@@ -35,7 +35,7 @@ O estado das sagas é persistido no MongoDB. A validação combina regras de neg
 │   │   └── Properties/launchSettings.json
 │   ├── Supplier.B.Producer.Api/                  # API produtora do Fornecedor B
 │   │   └── Properties/launchSettings.json
-│   ├── Supplier.Ingestion.Orchestrator.Api/
+│   ├── Supplier.Ingestion.Orchestrator.MasstransitApi/
 │   │   ├── Extensions/                           # Configuração modular (MassTransit, Health Checks)
 │   │   ├── Infrastructure/
 │   │   │   ├── Consumers/                        # Consumer da DLQ
@@ -166,7 +166,7 @@ O projeto `Supplier.Ingestion.Orchestrator.WolverineApi` é uma reimplementaçã
 
 ### Mapeamento entre as implementações
 
-| Conceito | MassTransit (`Orchestrator.Api`) | Wolverine (`Orchestrator.WolverineApi`) |
+| Conceito | MassTransit (`Orchestrator.MasstransitApi`) | Wolverine (`Orchestrator.WolverineApi`) |
 |---|---|---|
 | Processamento de entrada | `SupplierStateMachineBase` (Saga Pattern) | `SupplierInputProcessor` + handlers diretos |
 | Consumo da DLQ | `InvalidInfringementConsumer` | `InfringementValidationFailedHandler` |
@@ -267,7 +267,7 @@ graph LR
 Configure a chave da API Anthropic via User Secrets (uma única vez):
 
 ```bash
-dotnet user-secrets set "Anthropic:ApiKey" "sk-ant-..." --project src/Supplier.Ingestion.Orchestrator.Api
+dotnet user-secrets set "Anthropic:ApiKey" "sk-ant-..." --project src/Supplier.Ingestion.Orchestrator.MasstransitApi
 ```
 
 Suba toda a infraestrutura e as três APIs:

@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Supplier.Ingestion.Orchestrator.Api\Supplier.Ingestion.Orchestrator.Api.csproj" />
+    <ProjectReference Include="..\Supplier.Ingestion.Orchestrator.MasstransitApi\Supplier.Ingestion.Orchestrator.MasstransitApi.csproj" />
     <ProjectReference Include="..\Supplier.Ingestion.Orchestrator.WolverineApi\Supplier.Ingestion.Orchestrator.WolverineApi.csproj" />
     <ProjectReference Include="..\Supplier.A.Producer.Api\Supplier.A.Producer.Api.csproj" />
     <ProjectReference Include="..\Supplier.B.Producer.Api\Supplier.B.Producer.Api.csproj" />

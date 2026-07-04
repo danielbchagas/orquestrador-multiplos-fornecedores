@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Supplier.Ingestion.Orchestrator.Api\Supplier.Ingestion.Orchestrator.Api.csproj" />
+    <ProjectReference Include="..\..\src\Supplier.Ingestion.Orchestrator.MasstransitApi\Supplier.Ingestion.Orchestrator.MasstransitApi.csproj" />
   </ItemGroup>
 
   <ItemGroup>

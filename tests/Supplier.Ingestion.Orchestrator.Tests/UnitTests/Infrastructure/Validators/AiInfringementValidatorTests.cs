@@ -1,5 +1,5 @@
 using FluentAssertions;
-using Supplier.Ingestion.Orchestrator.Api.Validators;
+using Supplier.Ingestion.Orchestrator.MasstransitApi.Validators;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.UnitTests.Infrastructure.Validators;
 

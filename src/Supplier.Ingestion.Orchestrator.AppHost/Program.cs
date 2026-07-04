@@ -50,7 +50,7 @@ var grafana = builder.AddContainer("grafana", "grafana/grafana")
 
 // Os projetos enviam telemetria para o OTel Collector (que alimenta Grafana).
 // O Aspire Dashboard permanece ativo para gerenciamento de serviços.
-var api = builder.AddProject<Projects.Supplier_Ingestion_Orchestrator_Api>("api")
+var api = builder.AddProject<Projects.Supplier_Ingestion_Orchestrator_MasstransitApi>("api")
     .WithReference(mongoDb)
     .WithReference(kafka)
     .WaitFor(mongoDb)

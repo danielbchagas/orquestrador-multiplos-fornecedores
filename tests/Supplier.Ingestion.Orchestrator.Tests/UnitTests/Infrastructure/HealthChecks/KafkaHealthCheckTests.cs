@@ -2,7 +2,7 @@ using Confluent.Kafka;
 using FluentAssertions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Moq;
-using Supplier.Ingestion.Orchestrator.Api.Infrastructure.HealthChecks;
+using Supplier.Ingestion.Orchestrator.MasstransitApi.Infrastructure.HealthChecks;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.UnitTests.Infrastructure.HealthChecks;
 

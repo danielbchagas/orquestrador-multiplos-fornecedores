@@ -3,8 +3,8 @@ using Confluent.Kafka;
 using MassTransit;
 using MassTransit.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
-using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
+using Supplier.Ingestion.Orchestrator.MasstransitApi.Infrastructure.Events;
+using Supplier.Ingestion.Orchestrator.MasstransitApi.Infrastructure.StateMachines;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.IntegrationTests.Infrastructure.StateMachines;
 

@@ -23,7 +23,7 @@
       "type": "process",
       "args": [
         "build",
-        "${workspaceFolder}/src/Supplier.Ingestion.Orchestrator.Api/Supplier.Ingestion.Orchestrator.Api.csproj",
+        "${workspaceFolder}/src/Supplier.Ingestion.Orchestrator.MasstransitApi/Supplier.Ingestion.Orchestrator.MasstransitApi.csproj",
         "/property:GenerateFullPaths=true",
         "/consoleloggerparameters:NoSummary"
       ],

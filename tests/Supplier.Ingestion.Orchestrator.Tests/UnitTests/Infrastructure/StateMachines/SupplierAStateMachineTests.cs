@@ -1,6 +1,6 @@
 using AutoFixture;
-using Supplier.Ingestion.Orchestrator.Api.Infrastructure.Events;
-using Supplier.Ingestion.Orchestrator.Api.Infrastructure.StateMachines;
+using Supplier.Ingestion.Orchestrator.MasstransitApi.Infrastructure.Events;
+using Supplier.Ingestion.Orchestrator.MasstransitApi.Infrastructure.StateMachines;
 
 namespace Supplier.Ingestion.Orchestrator.Tests.UnitTests.Infrastructure.StateMachines;
 
