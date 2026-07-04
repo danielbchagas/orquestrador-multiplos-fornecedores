@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Confluent.Kafka;
 using Supplier.Ingestion.Orchestrator.WolverineApi.Infrastructure.Events;
 using Supplier.Ingestion.Orchestrator.WolverineApi.Security;
@@ -30,11 +31,14 @@ public static class WolverineExtensions
         {
             opts.ServiceName = "supplier-ingestion-orchestrator-wolverine";
 
-            // Mesmo contrato dos producers e da versão MassTransit: JSON camelCase, case-insensitive na leitura
+            // Mesmo contrato dos producers e da versão MassTransit: JSON camelCase, case-insensitive na leitura.
+            // AllowReadingFromString é necessário porque o serializer raw JSON do MassTransit
+            // escreve decimais como string (ex.: "amount": "195.23") no tópico de inválidas.
             opts.UseSystemTextJsonForSerialization(json =>
             {
                 json.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
                 json.PropertyNameCaseInsensitive = true;
+                json.NumberHandling = JsonNumberHandling.AllowReadingFromString;
             });
 
             opts.UseKafka(kafkaBootstrapServers).AutoProvision();
